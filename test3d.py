@@ -1,6 +1,6 @@
 import numpy as np
 from keras.models import Model
-from keras.layers import Input, merge, Convolution3D, MaxPooling3D, UpSampling3D, GlobalAveragePooling3D, Dense
+from keras.layers import Input, merge, Convolution3D, MaxPooling3D, UpSampling3D, GlobalAveragePooling3D, Dense, Flatten
 from keras.layers.normalization import BatchNormalization
 from keras.optimizers import SGD
 
@@ -86,7 +86,9 @@ def get_test3d():
     x = Convolution3D(sz, 3, 3, 3, activation='relu', border_mode='same')(x)
     x = BatchNormalization()(x)
 
-    x = GlobalAveragePooling3D()(x)
+    x = Convolution3D(sz, 2, 2, 2, activation='relu', border_mode='valid')(x)
+    x = Flatten()(x)
+    # x = GlobalAveragePooling3D()(x)
     x = Dense(2, activation='sigmoid')(x)
 
     model = Model(input=inputs, output=x)
