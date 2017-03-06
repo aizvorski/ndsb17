@@ -1,6 +1,7 @@
 import numpy as np
 from keras.models import Model
 from keras.layers import Input, merge, Convolution3D, MaxPooling3D, UpSampling3D, GlobalAveragePooling3D, Dense
+from keras.layers.normalization import BatchNormalization
 from keras.optimizers import SGD
 
 ## data loading
@@ -59,26 +60,31 @@ def get_test3d():
 
     x = Convolution3D(sz, 3, 3, 3, activation='relu', border_mode='same')(inputs)
     x = Convolution3D(sz, 3, 3, 3, activation='relu', border_mode='same')(x)
+    x = BatchNormalization()(x)
     x = MaxPooling3D(pool_size=(2, 2, 2))(x)
 
     sz = int(sz * alpha)
     x = Convolution3D(sz, 3, 3, 3, activation='relu', border_mode='same')(x)
     x = Convolution3D(sz, 3, 3, 3, activation='relu', border_mode='same')(x)
+    x = BatchNormalization()(x)
     x = MaxPooling3D(pool_size=(2, 2, 2))(x)
 
     sz = int(sz * alpha)
     x = Convolution3D(sz, 3, 3, 3, activation='relu', border_mode='same')(x)
     x = Convolution3D(sz, 3, 3, 3, activation='relu', border_mode='same')(x)
+    x = BatchNormalization()(x)
     x = MaxPooling3D(pool_size=(2, 2, 2))(x)
 
     sz = int(sz * alpha)
     x = Convolution3D(sz, 3, 3, 3, activation='relu', border_mode='same')(x)
     x = Convolution3D(sz, 3, 3, 3, activation='relu', border_mode='same')(x)
+    x = BatchNormalization()(x)
     x = MaxPooling3D(pool_size=(2, 2, 2))(x)
 
     sz = int(sz * alpha)
     x = Convolution3D(sz, 3, 3, 3, activation='relu', border_mode='same')(x)
     x = Convolution3D(sz, 3, 3, 3, activation='relu', border_mode='same')(x)
+    x = BatchNormalization()(x)
 
     x = GlobalAveragePooling3D()(x)
     x = Dense(2, activation='sigmoid')(x)
