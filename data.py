@@ -152,12 +152,12 @@ def luna16_get_patient_ids():
 
 
 def luna16_get_image(pid):
-    image = np.load(LUNA16_PATH + "processed/images_1mm/" + pid + ".npy")
+    image = np.load(LUNA16_PATH + "processed/images_1mm/" + pid + ".npy", mmap_mode='r')
     return image
 
 
 def luna16_get_segmented_image(pid):
-    segmented_image = np.load(LUNA16_PATH + "processed/segmented_1mm/" + pid + ".npy")
+    segmented_image = np.load(LUNA16_PATH + "processed/segmented_1mm/" + pid + ".npy", mmap_mode='r')
     return segmented_image
 
 
@@ -199,12 +199,28 @@ def luna16_get_node_volume(image, vsize, info, df, idx):
 from scipy import signal
 
 
-def compose_make_mask(vsize, sigma=10):
+def compose_make_mask_gaussian(vsize, sigma=10):
     mask = signal.gaussian(vsize[0], std=sigma)[:,None,None] * \
         signal.gaussian(vsize[1], std=sigma)[None,:,None] * \
         signal.gaussian(vsize[2], std=sigma)[None,None,:]
     return mask
 
+
+def compose_make_mask(vsize, diam, sigma):
+    # mask = np.zeros(vsize, dtype=np.float32)
+    # for i in range(vsize[0]):
+    #     for j in range(vsize[1]):
+    #         for k in range(vsize[2]):
+    #             dist = np.sqrt(np.sum(np.square(np.asarray([i, j, k]) - vsize / 2.0)))
+    #             if dist < diam/2.0:
+    #                 mask[i,j,k] = 1
+
+    grid = np.indices(vsize).astype(np.float32)
+    grid = grid - vsize[:,None,None,None]/2.0
+    mask = np.sqrt(np.sum(np.square(grid), axis=0)) < diam/2
+                    
+    mask = scipy.ndimage.filters.gaussian_filter(mask.astype(np.float32), sigma=sigma)
+    return mask
 
 def compose_max(volume, nodule, mask):
     x = np.amax( np.stack(((volume+1000) * (1-mask), (nodule+1000) * mask)), axis=0 ) - 1000
