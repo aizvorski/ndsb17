@@ -178,7 +178,7 @@ def luna16_get_volume(image, segmented_image, vsize, min_overlap=0.2):
     return None, None, None
 
 
-def luna16_get_node_volume(image, vsize, info, df, idx):
+def luna16_get_node_volume(image, vsize, info, df, idx, do_segmented_volume=False):
     node_x = df["coordX"].values[idx]
     node_y = df["coordY"].values[idx]
     node_z = df["coordZ"].values[idx]
@@ -194,6 +194,21 @@ def luna16_get_node_volume(image, vsize, info, df, idx):
 
     volume = image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
     return volume
+
+
+def luna16_get_all_nodules(vsize, df_nodes):
+    X = []
+    diams = []
+    for idx in range(len(df_nodes)):
+        #print(idx)
+        pid = df_nodes.iloc[idx]["pid"]
+        image = luna16_get_image(pid)
+        segmented_image = luna16_get_segmented_image(pid)
+        info = luna16_get_info(pid)
+        volume = luna16_get_node_volume(image, vsize, info, df_nodes, idx)
+        X.append(volume.copy())
+        diams.append(df_nodes.iloc[idx]["diameter_mm"])
+    return X, diams
 
 
 from scipy import signal
