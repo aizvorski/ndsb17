@@ -211,6 +211,104 @@ def luna16_get_all_nodules(vsize, df_nodes):
     return X, diams
 
 
+NDSB17_PATH = '/mnt/data/ndsb17/'
+
+
+# def ndsb17_get_df_nodes():
+#     df = pd.read_csv(NDSB17_PATH + 'processed/annotations/' + 'stage1_annotations_v1.csv')
+#     # TODO replace pids
+#     return df_nodes
+
+
+def ndsb17_get_patient_ids():
+    patient_ids = glob.glob(NDSB17_PATH+"processed/images_1mm/*.npy")
+    patient_ids = [ x.replace(NDSB17_PATH+"processed/images_1mm/", "").replace(".npy", "") for x in patient_ids ]
+    return patient_ids
+
+
+def ndsb17_get_annotations():
+    df = pd.read_csv(NDSB17_PATH + 'processed/annotations/' + 'stage1_annotations_v1.csv')
+
+    patient_ids = ndsb17_get_patient_ids()
+    short_pid_to_pid = { x[:6]: x for x in patient_ids }
+    
+    for n in range(len(df)):
+        tmp = df.ix[n, "pid"]
+        if len(str(tmp)) == 6:
+            short_pid = tmp
+        if short_pid in short_pid_to_pid:
+            df.ix[n, "pid"] = short_pid_to_pid[ short_pid ]
+    return df
+
+
+def ndsb17_get_image(pid):
+    image = np.load(NDSB17_PATH + "processed/images_1mm/" + pid + ".npy", mmap_mode='r')
+    return image
+
+
+def ndsb17_get_segmented_image(pid):
+    segmented_image = np.load(NDSB17_PATH + "processed/segmented_1mm/" + pid + ".npy", mmap_mode='r')
+    return segmented_image
+
+
+def ndsb17_get_info(pid):
+    with open(NDSB17_PATH + 'processed/infos/' + pid + '.info.json') as f:
+        info = json.load(f)
+    return info
+
+
+# def ndsb17_get_volume(image, segmented_image, vsize, min_overlap=0.2):
+#     for n in range(100):
+#         pos = np.asarray([ np.random.randint(k, image.shape[k] - vsize[k]) for k in range(3) ])
+#         volume = image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
+#         segmented_volume = segmented_image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
+#         overlap = np.mean(segmented_volume)
+#         if overlap >= min_overlap:
+#             return volume, segmented_volume, overlap
+#     return None, None, None
+
+
+def ndsb17_get_node_volume(image, vsize, info, df, idx):
+    # These positions are recoded as pixels in the native image
+
+    x, y, z = df.iloc[idx]["X"], df.iloc[idx]["Y"], df.iloc[idx]["Im"]
+    diam = df.iloc[idx]["Size, cm"] * 10
+
+    # z seems to be flipped
+    if info["do_flip_z"]:
+        z = -z
+
+    # x1 = x * info["spacing"][2] / info["spacing_1mm"][2]
+    # y1 = y * info["spacing"][1] / info["spacing_1mm"][1]
+    # z1 = z * info["spacing"][0] / info["spacing_1mm"][0]
+
+    center = np.array([z, y, x])
+    spacing = np.array(info["spacing"])
+    spacing_1mm = np.array(info["spacing_1mm"])
+
+    pos = (center * spacing/spacing_1mm) - (vsize/2)
+    pos = np.rint(pos).astype(np.int)
+
+    volume = image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
+    return volume, diam
+
+
+def ndsb17_get_all_nodules(vsize, df_nodes):
+    X = []
+    diams = []
+    for idx in range(len(df_nodes)):
+        #print(idx)
+        pid = df_nodes.iloc[idx]["pid"]
+        image = ndsb17_get_image(pid)
+        #segmented_image = ndsb17_get_segmented_image(pid)
+        info = ndsb17_get_info(pid)
+        volume, diam = ndsb17_get_node_volume(image, vsize, info, df_nodes, idx)
+        X.append(volume.copy())
+        diams.append(diam)
+    return X, diams
+
+
+
 from scipy import signal
 
 
