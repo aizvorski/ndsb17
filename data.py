@@ -211,7 +211,7 @@ def luna16_get_all_nodules(vsize, df_nodes):
     return X, diams
 
 
-NDSB17_PATH = '/mnt/data/ndsb17/'
+NDSB17_PATH = '/mnt/data2/ndsb17/'
 
 
 # def ndsb17_get_df_nodes():
@@ -220,14 +220,25 @@ NDSB17_PATH = '/mnt/data/ndsb17/'
 #     return df_nodes
 
 
+def ndsb17_get_df_labels():
+    df = pd.read_csv(NDSB17_PATH + 'original/' + 'stage1_labels.csv')
+    return df
+
+
 def ndsb17_get_patient_ids():
     patient_ids = glob.glob(NDSB17_PATH+"processed/images_1mm/*.npy")
     patient_ids = [ x.replace(NDSB17_PATH+"processed/images_1mm/", "").replace(".npy", "") for x in patient_ids ]
     return patient_ids
 
 
-def ndsb17_get_annotations():
-    df = pd.read_csv(NDSB17_PATH + 'processed/annotations/' + 'stage1_annotations_v1.csv')
+def ndsb17_get_patient_ids_noncancer():
+    df_labels = ndsb17_get_df_labels()
+    all_noncancer_pids = list(df_labels[df_labels["cancer"] == 0]["id"])
+    return all_noncancer_pids
+
+
+def ndsb17_get_df_nodes():
+    df = pd.read_csv(NDSB17_PATH + 'processed/annotations/' + 'stage1_annotations_v2.csv')
 
     patient_ids = ndsb17_get_patient_ids()
     short_pid_to_pid = { x[:6]: x for x in patient_ids }
@@ -238,6 +249,15 @@ def ndsb17_get_annotations():
             short_pid = tmp
         if short_pid in short_pid_to_pid:
             df.ix[n, "pid"] = short_pid_to_pid[ short_pid ]
+    for n in range(len(df)):
+        df.ix[n, "diameter_mm"] = 10*df.ix[n, "Size, cm"]
+
+    # filter by cancer only
+    # TODO make this a parameter
+    df_labels = ndsb17_get_df_labels()
+    all_cancer_pids = list(df_labels[df_labels["cancer"] == 1]["id"])
+    df = df[ df["pid"].isin(all_cancer_pids) ]
+
     return df
 
 
@@ -297,14 +317,19 @@ def ndsb17_get_all_nodules(vsize, df_nodes):
     X = []
     diams = []
     for idx in range(len(df_nodes)):
-        #print(idx)
-        pid = df_nodes.iloc[idx]["pid"]
-        image = ndsb17_get_image(pid)
-        #segmented_image = ndsb17_get_segmented_image(pid)
-        info = ndsb17_get_info(pid)
-        volume, diam = ndsb17_get_node_volume(image, vsize, info, df_nodes, idx)
-        X.append(volume.copy())
-        diams.append(diam)
+        try:
+            #print(idx)
+            pid = df_nodes.iloc[idx]["pid"]
+            if pid == "b8bb02d229361a623a4dc57aa0e5c485":
+                continue
+            image = ndsb17_get_image(pid)
+            #segmented_image = ndsb17_get_segmented_image(pid)
+            info = ndsb17_get_info(pid)
+            volume, diam = ndsb17_get_node_volume(image, vsize, info, df_nodes, idx)
+            X.append(volume.copy())
+            diams.append(diam)
+        except FileNotFoundError as e:
+            print(pid, repr(e))
     return X, diams
 
 
