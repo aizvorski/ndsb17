@@ -26,18 +26,62 @@ gen = datagen.batch_generator(vsize, patient_ids, X_nodules[:-50], diams[:-50])
 
 model = net.model3d((16, 16, 16))
 print(model.summary())
+volume_model = net.model3d((64, 64, 64), do_features=True)
 
 
 model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer='rmsprop')
 
-batch_size=64
+def random_volume(image, vsize):
+    pos = np.asarray([ np.random.randint(k, image.shape[k] - vsize[k]) for k in range(3) ])
+    volume = image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
+    return volume
 
-h = model.fit_generator(
-    gen,
-    10000,
-    nb_epoch=100,
-    verbose=1)
+patient_ids_noncancer = data.ndsb17_get_patient_ids_noncancer()
 
-print(h.history)
+test_nodules = np.stack(X_nodules[-50:])[...,None] # FIXME pass nodules as input
+test_nodules = datagen.preprocess(test_nodules)
+test_nodules = scipy.ndimage.interpolation.zoom(test_nodules, (1, 0.5, 0.5, 0.5, 1), order=1)
 
-model.save_weights('tmp2.h5')
+test_volumes = []
+
+for n in range(10):
+    pid = random.choice(patient_ids_noncancer)
+    image = data.ndsb17_get_image(pid)
+    # info = data.ndsb17_get_info(pid)
+    test_volume = random_volume(image, (128,128,128))
+    test_volume = datagen.preprocess(test_volume)
+    test_volume = scipy.ndimage.interpolation.zoom(test_volume, (0.5, 0.5, 0.5), order=1)
+    test_volumes.append(test_volume)
+
+test_volumes = np.stack(test_volumes)[...,None]
+
+def eval_model(model, volume_model, num_evals=10):
+    p = model.predict(test_nodules)
+    p_threshold = np.mean(sorted(p[:,1])[10:20]) # FIXME depends on size of X_nodules and tpr target
+
+    model.save_weights('junk.h5')
+    volume_model.load_weights('junk.h5')
+
+    fpr_list = []
+    for n in range(num_evals):
+        test_result = volume_model.predict(test_volumes[n:n+1], batch_size=1)
+        test_p = net.softmax_activations(test_result)
+        fpr = np.count_nonzero(test_p[0,:,:,:,1] > p_threshold) / test_volume.size
+        fpr_list.append(fpr)
+    
+    return np.mean(fpr_list), p_threshold, fpr_list
+
+
+for e in range(100):
+    h = model.fit_generator(
+        gen,
+        1000,
+        nb_epoch=1,
+        verbose=1)
+
+    fpr, p_threshold, fpr_list = eval_model(model, volume_model)
+    print("fpr", fpr, "std", np.std(fpr_list), "p_threshold", p_threshold)
+
+#print(h.history)
+
+
