@@ -1,6 +1,6 @@
 import numpy as np
 from keras.models import Model
-from keras.optimizers import SGD, Adam, Nadam
+from keras.optimizers import SGD, Adam, Nadam, RMSprop
 
 from keras_tqdm import TQDMNotebookCallback
 
@@ -11,6 +11,7 @@ import net
 #import importlib; importlib.reload(data)
 import random
 import scipy.ndimage.interpolation
+import json
 
 vsize = np.asarray([32,32,32])
 
@@ -28,8 +29,9 @@ model = net.model3d((16, 16, 16))
 print(model.summary())
 volume_model = net.model3d((64, 64, 64), do_features=True)
 
+optimizer = RMSprop(lr=0.001)
+model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=optimizer)
 
-model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer='rmsprop')
 
 def random_volume(image, vsize):
     pos = np.asarray([ np.random.randint(k, image.shape[k] - vsize[k]) for k in range(3) ])
@@ -57,8 +59,9 @@ test_volumes = np.stack(test_volumes)[...,None]
 
 def eval_model(model, volume_model, num_evals=10):
     p = model.predict(test_nodules)
-    p_threshold = np.mean(sorted(p[:,1])[10:20]) # FIXME depends on size of X_nodules and tpr target
-
+    p_threshold = np.mean(sorted(p[:,1])[10:15]) # FIXME depends on size of X_nodules and tpr target
+    print([ '%.4f' %(x) for x in sorted(p[:,1])[:10] ])
+    #p_threshold = 0.99
     model.save_weights('junk.h5')
     volume_model.load_weights('junk.h5')
 
@@ -71,17 +74,23 @@ def eval_model(model, volume_model, num_evals=10):
     
     return np.mean(fpr_list), p_threshold, fpr_list
 
+history = {'loss':[], 'acc':[], 'fpr':[], 'p_threshold':[]}
 
 for e in range(100):
     h = model.fit_generator(
         gen,
-        1000,
+        10000,
         nb_epoch=1,
         verbose=1)
 
     fpr, p_threshold, fpr_list = eval_model(model, volume_model)
     print("fpr", fpr, "std", np.std(fpr_list), "p_threshold", p_threshold)
+    history['loss'].append(h.history['loss'][0])
+    history['acc'].append(h.history['acc'][0])
+    history['fpr'].append(fpr)
+    history['p_threshold'].append(p_threshold)
 
-#print(h.history)
+    with open('log.json', 'w') as fh:
+        json.dump(history, fh)
 
 
