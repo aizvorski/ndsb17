@@ -7,6 +7,10 @@ import scipy.ndimage.interpolation
 X_mean, X_std = -298.099, 436.168
 
 
+def preprocess(image):
+    return (image - X_mean) / X_std
+
+
 def make_augmented(vsize, volume, X_nodules, diams):
     idx = random.choice(range(len(X_nodules)))
     nodule = X_nodules[idx]
@@ -45,7 +49,9 @@ def sample_generator(vsize, patient_ids, X_nodules, diams):
             
         pos = np.asarray([ np.random.randint(k, image.shape[k] - vsize[k]) for k in range(3) ])
         segmented_volume = segmented_image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
+        is_lung = True
         if np.count_nonzero(segmented_volume) == 0:
+            is_lung = False
             if np.random.random() > 0.01:
                 continue
 #         segpack_volume = segpack[pos[0]//8:(pos[0]+vsize[0])//8, pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
@@ -57,7 +63,7 @@ def sample_generator(vsize, patient_ids, X_nodules, diams):
         central_density = np.mean((volume+1000) * central_mask) / np.mean(central_mask) - 1000
     
         is_augmented = False
-        if central_density < -500 and np.random.choice([True, False]):
+        if central_density < -500 and is_lung and np.random.choice([True, False]):
             volume = make_augmented(vsize, volume, X_nodules, diams)
             is_augmented = True
             n_aug += 1
