@@ -4,7 +4,7 @@ import SimpleITK as sitk
 import scipy.ndimage.interpolation
 import skimage.transform
 
-luna_path = "luna16_unpack/"
+luna_path = "/mnt/data/luna16/unpacked/"
 
 # read metadata
 
@@ -63,23 +63,71 @@ def get_node_sections(img_node, diam):
     return
 
 
+def load_scans_luna16(img_file):
+    itk_img = sitk.ReadImage(img_file)
+    img_array = sitk.GetArrayFromImage(itk_img)
+
+    origin = np.array(itk_img.GetOrigin()) #x,y,z  Origin in world coordinates (mm)
+    spacing = np.array(itk_img.GetSpacing())# spacing of voxels in world coor. (mm)
+
+    return itk_img, spacing, origin
+
+def resample_luna16(image, spacing, new_spacing):
+    resize_factor = spacing / new_spacing
+    new_real_shape = image.shape * resize_factor
+    new_shape = np.round(new_real_shape)
+    real_resize_factor = new_shape / image.shape
+    new_spacing = spacing / real_resize_factor
+    
+    image = scipy.ndimage.interpolation.zoom(image, real_resize_factor, order=1)
+    
+    return image, new_spacing
+
+import json
+
+INPUT_FOLDER = '/mnt/data/luna16/unpacked/'
+OUTPUT_FOLDER = '/mnt/data/luna16/processed/'
+
+def process_series(pid):
+    print(pid)
+    # input_file = glob(INPUT_FOLDER+"*/" +pid+  ".mhd")[0]
+    image, spacing, origin = load_scans_luna16(INPUT_FOLDER+"/" +pid+  ".mhd")
+    np.save(OUTPUT_FOLDER + 'original_resolution/' + pid + '.npy', image)
+
+    with open(OUTPUT_FOLDER + 'original_resolution/' + pid + '.info.json', 'w') as f:
+        json.dump({'spacing': list(spacing), 'origin':list(origin)}, f)
+
+    image_1mm, _ = resample(image, scans, [1,1,1])
+    np.save(OUTPUT_FOLDER + '1mm/' + pid + '.npy', image_1mm)
+
+    #     image_iso, _ = resample(image, scans, [spacing[1], spacing[1], spacing[2]])
+    #     np.save(OUTPUT_FOLDER + 'iso/' + pid + '.npy', image_iso)
+
+    segmented_lungs_fill = segment_lung_mask(image, True)
+    np.save(OUTPUT_FOLDER + 'segmented_lungs/' + pid + '.npy', segmented_lungs_fill)
+
+
+
 df_node = get_df_node()
 files = list(set(df_node["file"]))
 
-all_diams = {}
+# all_diams = {}
 
-n = 0
-for img_file in files:
-    print img_file
-    img_nodes, diams = read_nodes(img_file, df_node)
-    for i in range(len(img_nodes)):
-        print n
-        np.save("luna16_cube64/nodules/" + str(n) + ".npy", img_nodes[i])
-        all_diams[n] = diams[i]
-        n += 1
+# n = 0
+# for img_file in files:
+#     print img_file
+#     img_nodes, diams = read_nodes(img_file, df_node)
+#     for i in range(len(img_nodes)):
+#         print n
+#         np.save("luna16_cube64/nodules/" + str(n) + ".npy", img_nodes[i])
+#         all_diams[n] = diams[i]
+#         n += 1
 
-all_diams_array = np.zeros((n,), dtype=int)
-for i in range(n):
-    all_diams_array[i] = all_diams[i]
+# all_diams_array = np.zeros((n,), dtype=int)
+# for i in range(n):
+#     all_diams_array[i] = all_diams[i]
 
-np.save("luna16_cube64/nodules/all_diams.npy", all_diams_array)
+# np.save("luna16_cube64/nodules/all_diams.npy", all_diams_array)
+
+for pid in df_node["seriesuid"]:
+    process_series(pid)
