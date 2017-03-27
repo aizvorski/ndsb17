@@ -58,7 +58,7 @@ def model3d(vsize, do_features=False):
     return model
 
 
-def make_full_result(model, image):
+def tiled_predict(model, image):
     s = 49
     d = 64
     m = 8
