@@ -18,7 +18,7 @@ vsize = np.asarray([32,32,32])
 df_nodes = data.ndsb17_get_df_nodes() 
 df_nodes = df_nodes[(df_nodes["diameter_mm"]>10)]
 
-patient_ids = data.ndsb17_get_patient_ids()
+patient_ids = data.ndsb17_get_patient_ids_noncancer()
 
 X_nodules, diams = data.ndsb17_get_all_nodules(vsize, df_nodes)
 
