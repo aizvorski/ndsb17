@@ -88,7 +88,7 @@ for e in range(100):
     history['loss'].append(h.history['loss'][0])
     history['acc'].append(h.history['acc'][0])
     history['fpr'].append(fpr)
-    history['p_threshold'].append(p_threshold)
+    history['p_threshold'].append(float(p_threshold))
 
     with open('log.json', 'w') as fh:
         json.dump(history, fh)
