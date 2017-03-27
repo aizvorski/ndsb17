@@ -225,6 +225,11 @@ def ndsb17_get_df_labels():
     return df
 
 
+def ndsb17_get_df_test_labels():
+    df = pd.read_csv(NDSB17_PATH + 'original/' + 'stage1_test_labels.csv')
+    return df
+
+
 def ndsb17_get_patient_ids():
     patient_ids = glob.glob(NDSB17_PATH+"processed/images_1mm/*.npy")
     patient_ids = [ x.replace(NDSB17_PATH+"processed/images_1mm/", "").replace(".npy", "") for x in patient_ids ]
