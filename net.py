@@ -9,53 +9,46 @@ def model3d(vsize, sz=48, alpha=1.5, do_features=False):
     inputs = Input(vsize + (1,))
     
     def conv3dparams(**replace_params):
-        params = { 'activation':ELU(), 'border_mode':'valid', 'init': 'he_normal' }
+        params = { 'activation':'linear', 'border_mode':'valid', 'init': 'he_normal' }
         params.update(replace_params)
         return params
 
     x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(inputs)
-    x = BatchNormalization()(x)
+    x = ELU()(BatchNormalization()(x))
 
     sz = int(sz * alpha)
     x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
-    x = BatchNormalization()(x)
+    x = ELU()(BatchNormalization()(x))
     x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
-    x = BatchNormalization()(x)
-    # x = MaxPooling3D(pool_size=(2, 2, 2))(x)
+    x = ELU()(BatchNormalization()(x))
 
     sz = int(sz * alpha)
     x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
-    x = BatchNormalization()(x)
+    x = ELU()(BatchNormalization()(x))
     x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
-    x = BatchNormalization()(x)
+    x = ELU()(BatchNormalization()(x))
     x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
-    x = BatchNormalization()(x)
+    x = ELU()(BatchNormalization()(x))
     x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
-    x = BatchNormalization()(x)
-    # x = MaxPooling3D(pool_size=(2, 2, 2))(x)
+    x = ELU()(BatchNormalization()(x))
 
     sz = int(sz * alpha)
     x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
-    x = BatchNormalization()(x)
+    x = ELU()(BatchNormalization()(x))
     x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
-    x = BatchNormalization()(x)
+    x = ELU()(BatchNormalization()(x))
     x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
-    x = BatchNormalization()(x)
+    x = ELU()(BatchNormalization()(x))
     x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
-    x = BatchNormalization()(x)
-    # x = MaxPooling3D(pool_size=(2, 2, 2))(x)
+    x = ELU()(BatchNormalization()(x))
 
     sz = int(sz * alpha)
-    # x = Convolution3D(sz, 3, 3, 3, **conv3dparams)(x)
-    # x = Convolution3D(sz, 3, 3, 3, **conv3dparams)(x)
-    # x = BatchNormalization()(x)
-
     x = Convolution3D(sz, 2, 2, 2, **conv3dparams())(x)
-    x = BatchNormalization()(x)
+    x = ELU()(BatchNormalization()(x))
     x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
-    x = BatchNormalization()(x)
+    x = ELU()(BatchNormalization()(x))
     x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
-    x = BatchNormalization()(x)
+    x = ELU()(BatchNormalization()(x))
     x = Convolution3D(2, 1, 1, 1, **conv3dparams(activation='linear', border_mode='same'))(x)
     if not do_features:
         x = Flatten()(x)
