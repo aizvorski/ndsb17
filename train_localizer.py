@@ -31,6 +31,8 @@ df_nodes = df_nodes[(df_nodes["diameter_mm"]>10)]
 patient_ids = data.ndsb17_get_patient_ids_noncancer()
 
 X_nodules, diams = data.ndsb17_get_all_nodules(np.asarray([64,64,64]), df_nodes)
+X_nodules = [x for x in X_nodules if x.shape == (64,64,64)] # FIXME not all results are full size
+print("nodules", len(X_nodules))
 
 gen = datagen.batch_generator(vsize, patient_ids, X_nodules[:-50], diams[:-50])
 
