@@ -60,9 +60,9 @@ for n in range(10):
 test_volumes = np.stack(test_volumes)[...,None]
 
 def eval_model(model, volume_model, num_evals=10):
-    p_list = model.predict(test_nodules)
-    p_threshold = np.mean(sorted(p_list[:,1])[10:15]) # FIXME depends on size of X_nodules and tpr target
-    print([ '%.4f' %(x) for x in sorted(p_list[:,1])[:10] ])
+    p_list = model.predict(test_nodules)[:,1]
+    p_threshold = np.mean(sorted(p_list)[10:15]) # FIXME depends on size of X_nodules and tpr target
+    print([ '%.4f' %(x) for x in sorted(p_list)[:10] ])
     #p_threshold = 0.99
     model.save_weights(SNAP_PATH + run_id + '.tmp.h5')
     volume_model.load_weights(SNAP_PATH + run_id + '.tmp.h5')
