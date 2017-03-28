@@ -11,16 +11,34 @@ def preprocess(image):
     return (image - X_mean) / X_std
 
 
-def make_augmented(vsize, volume, X_nodules, diams):
+def volume_rotation(volume, angle):
+    result = np.zeros(vsize, dtype=np.float32)
+    for i in range(vsize[0]):
+        result[i] = skimage.transform.rotate(volume[i], angle, resize=False, preserve_range=True, order=1)
+    return result
+
+
+def volume_crop(volume, vsize):
+    p0 = (volume.shape[0] - vsize[0])//2
+    p1 = (volume.shape[1] - vsize[1])//2
+    p2 = (volume.shape[2] - vsize[2])//2
+    return volume[p0:p0+vsize[0], p1:p1+vsize[1], p2:p2+vsize[2] ]
+
+
+def make_augmented(vsize, volume, X_nodules, diams, do_flip=True, do_rotate=True):
     idx = random.choice(range(len(X_nodules)))
     nodule = X_nodules[idx]
     # randomly flip or not flip each axis
-    if random.choice([True, False]):
-        nodule = nodule[::-1,:,:]
-    if random.choice([True, False]):
-        nodule = nodule[:,::-1,:]
-    if random.choice([True, False]):
-        nodule = nodule[:,:,::-1]
+    if do_flip:
+        if random.choice([True, False]):
+            nodule = nodule[::-1,:,:]
+        if random.choice([True, False]):
+            nodule = nodule[:,::-1,:]
+        if random.choice([True, False]):
+            nodule = nodule[:,:,::-1]
+    if do_rotate:
+        nodule = volume_rotation(nodule, np.random.randint(0,360))
+    nodule = volume_crop(nodule, vsize)
     mask = data.compose_make_mask(vsize, diam=diams[idx]+6, sigma=(diams[idx]+6)/8)
     volume_aug = data.compose_max2(volume, nodule, mask)
     return volume_aug

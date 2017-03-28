@@ -30,7 +30,7 @@ df_nodes = df_nodes[(df_nodes["diameter_mm"]>10)]
 
 patient_ids = data.ndsb17_get_patient_ids_noncancer()
 
-X_nodules, diams = data.ndsb17_get_all_nodules(vsize, df_nodes)
+X_nodules, diams = data.ndsb17_get_all_nodules(np.asarray([64,64,64]), df_nodes)
 
 gen = datagen.batch_generator(vsize, patient_ids, X_nodules[:-50], diams[:-50])
 
@@ -42,7 +42,9 @@ def random_volume(image, vsize):
 
 patient_ids_noncancer = data.ndsb17_get_patient_ids_noncancer()
 
-test_nodules = np.stack(X_nodules[-50:])[...,None] # FIXME pass nodules as input
+# FIXME pass nodules split as input
+# FIXME crop because expanded margin for rotation
+test_nodules = np.stack(X_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
 test_nodules = datagen.preprocess(test_nodules)
 test_nodules = scipy.ndimage.interpolation.zoom(test_nodules, (1, 0.5, 0.5, 0.5, 1), order=1)
 
