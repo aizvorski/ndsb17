@@ -88,7 +88,15 @@ model = net.model3d((16, 16, 16), sz=config.feature_sz, alpha=config.feature_alp
 print(model.summary())
 volume_model = net.model3d((64, 64, 64), sz=config.feature_sz, alpha=config.feature_alpha, do_features=True)
 
-optimizer = RMSprop(lr=config.lr)
+if config.optimizer == 'rmsprop':
+    optimizer = RMSprop(lr=config.lr)
+elif config.optimizer == 'adam':
+    optimizer = Adam(lr=config.lr)
+elif config.optimizer == 'nadam':
+    optimizer = Nadam(lr=config.lr)
+elif config.optimizer == 'sgd':
+    optimizer = SGD(lr=config.lr, momentum=0.9, nesterov=True)
+
 model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=optimizer)
 
 
