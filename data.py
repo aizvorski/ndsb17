@@ -9,6 +9,11 @@ from multiprocessing import Pool
 
 from skimage import measure, morphology
 
+import random
+
+np.random.seed(314159)
+random.seed(314159)
+
 def largest_label_volume(im, bg=-1):
     vals, counts = np.unique(im, return_counts=True)
 
