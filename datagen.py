@@ -13,7 +13,7 @@ def preprocess(image):
 
 def volume_rotation(volume, angle):
     result = np.zeros(volume.shape, dtype=np.float32)
-    for i in range(vsize[0]):
+    for i in range(volume.shape[0]):
         result[i] = skimage.transform.rotate(volume[i], angle, resize=False, preserve_range=True, order=1)
     return result
 
