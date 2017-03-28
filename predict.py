@@ -5,15 +5,17 @@ import scipy.ndimage.interpolation
 import numpy as np
 import pandas as pd
 import pickle
+import os
 
-volume_model = net.model3d((64, 64, 64), do_features=True)
-volume_model.load_weights('tmp2c.h5')
+volume_model = net.model3d((64, 64, 64), sz=48, alpha=1.5, do_features=True)
+volume_model.load_weights('/mnt/data/ndsb17/models/tmp2c.h5')
 
-df = data.ndsb17_get_df_test_labels()
+df = data.ndsb17_get_df_labels()
 
-for n in range(len(df)):
-    pid = df["id"][n]
-    print(pid, df["cancer"][n])
+
+def predict_regions(pid):
+    if os.path.exists('/mnt/data/ndsb17/predict/boxes/' + pid + '.pkl'):
+        return
 
     image = data.ndsb17_get_image(pid)
     segmented_image = data.ndsb17_get_segmented_image(pid)
@@ -39,5 +41,14 @@ for n in range(len(df)):
     for idx in np.argsort(label_activities_sum)[::-1][:5]:
         print(idx, label_boxes[idx], label_sizes[idx], label_activities_sum[idx])
 
-    with open('/mnt/data/ndsb17/predict/' + pid + '.pkl', 'wb') as fh:
+    with open('/mnt/data/ndsb17/predict/boxes/' + pid + '.pkl', 'wb') as fh:
         pickle.dump( (label_boxes, label_sizes, label_activities_sum, label_activities_max), fh )
+
+for n in range(len(df)):
+    pid = df["id"][n]
+    print(pid, df["cancer"][n])
+
+    try:
+        predict_regions(pid)
+    except Exception as e:
+        print(str(e))
