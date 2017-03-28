@@ -105,5 +105,5 @@ for e in range(config.num_epochs):
 
     model.save_weights(SNAP_PATH + run_id + '.{:4d}'.format(e) + '.h5')
 
-    with open(SNAP_PATH + run_id + '.log.json', 'w') as fh:
+    with open(SNAP_PATH + run_id + '.log.json', 'wb') as fh:
         json.dump(history, fh)
