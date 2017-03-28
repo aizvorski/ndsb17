@@ -5,10 +5,8 @@ from keras.layers.advanced_activations import ELU
 import numpy as np
 
 
-def model3d(vsize, do_features=False):
+def model3d(vsize, sz=48, alpha=1.5, do_features=False):
     inputs = Input(vsize + (1,))
-    sz = 48
-    alpha = 1.5
     
     def conv3dparams(**replace_params):
         params = { 'activation':ELU(), 'border_mode':'valid', 'init': 'he_normal' }
