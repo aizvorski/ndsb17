@@ -2,6 +2,8 @@ import data
 import numpy as np
 import random
 import scipy.ndimage.interpolation
+import skimage.transform
+
 
 # X_mean, X_std = -378.9, 475.913 # for LUNA16
 X_mean, X_std = -298.099, 436.168
