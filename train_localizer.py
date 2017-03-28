@@ -77,7 +77,7 @@ def eval_model(model, volume_model, num_evals=10):
     return np.mean(fpr_list), p_threshold, fpr_list, p_list
 
 history = {'loss':[], 'acc':[], 'fpr':[], 'p_threshold':[], 'p_list':[]}
-history['version'] = subprocess.check_output('git describe --always --dirty', shell=True)
+history['version'] = subprocess.check_output('git describe --always --dirty', shell=True).decode('ascii').strip()
 history['argv'] = sys.argv
 
 model = net.model3d((16, 16, 16), sz=config.feature_sz, alpha=config.feature_alpha)
@@ -103,7 +103,7 @@ for e in range(config.num_epochs):
     history['p_threshold'].append(float(p_threshold))
     history['p_list'].append([ float(x) for x in p_list])
 
-    model.save_weights(SNAP_PATH + run_id + '.{:4d}'.format(e) + '.h5')
+    model.save_weights(SNAP_PATH + run_id + '.{:04d}'.format(e) + '.h5')
 
-    with open(SNAP_PATH + run_id + '.log.json', 'wb') as fh:
+    with open(SNAP_PATH + run_id + '.log.json', 'w') as fh:
         json.dump(history, fh)
