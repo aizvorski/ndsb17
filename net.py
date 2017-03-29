@@ -9,7 +9,7 @@ def model3d(vsize, sz=48, alpha=1.5, do_features=False):
     inputs = Input(vsize + (1,))
     
     def conv3dparams(**replace_params):
-        params = { 'activation':ELU(), 'border_mode':'valid', 'init': 'he_normal' }
+        params = { 'activation':LeakyReLU(0.1), 'border_mode':'valid', 'init': 'he_normal' }
         params.update(replace_params)
         return params
 
