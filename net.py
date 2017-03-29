@@ -1,7 +1,7 @@
 from keras.models import Model
 from keras.layers import Input, merge, Convolution3D, MaxPooling3D, UpSampling3D, GlobalAveragePooling3D, Dense, Flatten, Dropout, Activation, SpatialDropout3D
 from keras.layers.normalization import BatchNormalization
-from keras.layers.advanced_activations import ELU
+from keras.layers.advanced_activations import ELU, LeakyReLU
 import numpy as np
 
 
@@ -15,29 +15,46 @@ def model3d(vsize, sz=48, alpha=1.5, do_features=False):
 
     x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(inputs)
     x = BatchNormalization()(x)
-
-    sz = int(sz * alpha)
-    x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
-    x = BatchNormalization()(x)
-    x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
-    x = BatchNormalization()(x)
-    x = SpatialDropout3D(0.2)(x)
-
-    sz = int(sz * alpha)
-    x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
-    x = BatchNormalization()(x)
-    x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
+    x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
     x = BatchNormalization()(x)
 
     sz = int(sz * alpha)
     x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
     x = BatchNormalization()(x)
+    x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
+    x = BatchNormalization()(x)
     x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
     x = BatchNormalization()(x)
-    x = SpatialDropout3D(0.5)(x)
+    x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
+    x = BatchNormalization()(x)
+    #x = SpatialDropout3D(0.2)(x)
+
+    sz = int(sz * alpha)
+    x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
+    x = BatchNormalization()(x)
+    x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
+    x = BatchNormalization()(x)
+    x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
+    x = BatchNormalization()(x)
+    x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
+    x = BatchNormalization()(x)
+    #x = SpatialDropout3D(0.2)(x)
+
+    sz = int(sz * alpha)
+    x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
+    x = BatchNormalization()(x)
+    x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
+    x = BatchNormalization()(x)
+    x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
+    x = BatchNormalization()(x)
+    x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
+    x = BatchNormalization()(x)
+    #x = SpatialDropout3D(0.5)(x)
 
     sz = int(sz * alpha)
     x = Convolution3D(sz, 2, 2, 2, **conv3dparams())(x)
+    x = BatchNormalization()(x)
+    x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
     x = BatchNormalization()(x)
     x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
     x = BatchNormalization()(x)
