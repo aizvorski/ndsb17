@@ -4,6 +4,7 @@ import dicom
 import os
 import scipy.ndimage
 import matplotlib.pyplot as plt
+import pickle
 
 from multiprocessing import Pool
 
@@ -342,6 +343,43 @@ def ndsb17_get_all_nodules(vsize, df_nodes):
             print(pid, repr(e))
     return X, diams
 
+"""
+Note: depends on output from predict_localizer.py
+"""
+def ndsb17_get_predicted_nodules(patient_ids):
+    X_predicted_nodules = []
+    predicted_diams = []
+    for pid in patient_ids:
+        try:
+            with open('/mnt/data/ndsb17/predict/boxes/' + pid + '.pkl', 'rb') as fh:
+                label_boxes, label_sizes, label_activities_sum, label_activities_max = pickle.load( fh )
+        except FileNotFoundError as e:
+            print(str(e))
+            continue
+
+        idx = np.argsort(label_activities_sum)[::-1][:1]
+        box = label_boxes[idx]
+        if box is None:
+            continue
+        if label_activities_sum[idx] < 30: # FIXME configurable or soft threshold
+            continue
+        
+        center = 2*np.asarray([(box[0].start+box[0].stop)//2, (box[1].start+box[1].stop)//2, (box[2].start+box[2].stop)//2 ])
+        
+        image = data.ndsb17_get_image(pid)
+        # segmented_image = data.ndsb17_get_segmented_image(pid)
+        # image = datagen.preprocess(image)
+        # image_2mm = scipy.ndimage.interpolation.zoom(image, (0.5, 0.5, 0.5), order=1)
+        # segmented_image_2mm = scipy.ndimage.interpolation.zoom(segmented_image.astype(np.float32), (0.5, 0.5, 0.5), order=1)
+        # segmented_image_2mm = (segmented_image_2mm > 0)
+
+        volume = image[center[0]-32:center[0]+32, center[1]-32:center[1]+32, center[2]-32:center[2]+32 ]
+        if volume.shape != (64,64,64):
+            continue
+        X_predicted_nodules.append(volume)
+        predicted_diams.append( np.mean([(box[0].start-box[0].stop), (box[1].start-box[1].stop), (box[2].start-box[2].stop) ]) )
+
+    return X_predicted_nodules, predicted_diams
 
 
 from scipy import signal
