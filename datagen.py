@@ -118,7 +118,8 @@ def batch_generator_ab(vsize, patient_ids, X_nodules_a, diams_a, X_nodules_b, di
     while True:
         X = np.zeros((batch_size, 32,32,32,1), dtype=np.float32)
         y = np.zeros((batch_size, 2), dtype=np.int)
-        for n in range(batch_size):
+        n = 0
+        while n < batch_size:
             if np.random.random() < 0.5:
                 volume, is_augmented = next(gen_a)
                 if not is_augmented: 
@@ -130,6 +131,7 @@ def batch_generator_ab(vsize, patient_ids, X_nodules_a, diams_a, X_nodules_b, di
                     continue
                 y[n,1] = 1
             X[n,:,:,:,0] = volume
+            n += 1
         X = (X - X_mean)/X_std
         X = scipy.ndimage.interpolation.zoom(X, (1, 0.5, 0.5, 0.5, 1), order=1)
         yield X, y
