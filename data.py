@@ -365,9 +365,10 @@ def ndsb17_get_predicted_nodules(patient_ids):
             continue
         
         center = 2*np.asarray([(box[0].start+box[0].stop)//2, (box[1].start+box[1].stop)//2, (box[2].start+box[2].stop)//2 ])
+        diam = 2*np.mean([(box[0].start-box[0].stop), (box[1].start-box[1].stop), (box[2].start-box[2].stop) ])
         
-        image = data.ndsb17_get_image(pid)
-        # segmented_image = data.ndsb17_get_segmented_image(pid)
+        image = ndsb17_get_image(pid)
+        # segmented_image = ndsb17_get_segmented_image(pid)
         # image = datagen.preprocess(image)
         # image_2mm = scipy.ndimage.interpolation.zoom(image, (0.5, 0.5, 0.5), order=1)
         # segmented_image_2mm = scipy.ndimage.interpolation.zoom(segmented_image.astype(np.float32), (0.5, 0.5, 0.5), order=1)
@@ -377,7 +378,7 @@ def ndsb17_get_predicted_nodules(patient_ids):
         if volume.shape != (64,64,64):
             continue
         X_predicted_nodules.append(volume)
-        predicted_diams.append( np.mean([(box[0].start-box[0].stop), (box[1].start-box[1].stop), (box[2].start-box[2].stop) ]) )
+        predicted_diams.append( diam )
 
     return X_predicted_nodules, predicted_diams
 

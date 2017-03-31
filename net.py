@@ -27,7 +27,7 @@ def model3d(vsize, sz=48, alpha=1.5, do_features=False):
     x = BatchNormalization()(x)
     x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
     x = BatchNormalization()(x)
-    #x = SpatialDropout3D(0.2)(x)
+    x = SpatialDropout3D(0.2)(x)
 
     sz = int(sz * alpha)
     x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
@@ -38,7 +38,7 @@ def model3d(vsize, sz=48, alpha=1.5, do_features=False):
     x = BatchNormalization()(x)
     x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
     x = BatchNormalization()(x)
-    #x = SpatialDropout3D(0.2)(x)
+    x = SpatialDropout3D(0.2)(x)
 
     sz = int(sz * alpha)
     x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
@@ -49,7 +49,7 @@ def model3d(vsize, sz=48, alpha=1.5, do_features=False):
     x = BatchNormalization()(x)
     x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
     x = BatchNormalization()(x)
-    #x = SpatialDropout3D(0.5)(x)
+    x = SpatialDropout3D(0.5)(x)
 
     sz = int(sz * alpha)
     x = Convolution3D(sz, 2, 2, 2, **conv3dparams())(x)
