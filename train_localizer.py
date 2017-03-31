@@ -64,7 +64,7 @@ for n in range(10):
 test_volumes = np.stack(test_volumes)[...,None]
 
 def eval_model(model, volume_model, num_evals=10):
-    p_list = model.predict(test_nodules)[:,1]
+    p_list = model.predict(test_nodules)[:,0]
     p_threshold = np.mean(sorted(p_list)[10:15]) # FIXME depends on size of X_nodules and tpr target
     print([ '%.4f' %(x) for x in sorted(p_list)[:10] ])
     #p_threshold = 0.99
@@ -74,8 +74,8 @@ def eval_model(model, volume_model, num_evals=10):
     fpr_list = []
     for n in range(num_evals):
         test_result = volume_model.predict(test_volumes[n:n+1], batch_size=1)
-        test_p = net.softmax_activations(test_result)
-        fpr = np.count_nonzero(test_p[0,:,:,:,1] > p_threshold) / test_volume.size
+        test_p = net.sigmoid_activations(test_result)
+        fpr = np.count_nonzero(test_p[0,:,:,:,0] > p_threshold) / test_volume.size
         fpr_list.append(fpr)
     
     return np.mean(fpr_list), p_threshold, fpr_list, p_list
@@ -97,7 +97,7 @@ elif config.optimizer == 'nadam':
 elif config.optimizer == 'sgd':
     optimizer = SGD(lr=config.lr, momentum=0.9, nesterov=True)
 
-model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=optimizer)
+model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=optimizer)
 
 
 for e in range(config.num_epochs):
