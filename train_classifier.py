@@ -37,7 +37,7 @@ print("cancer nodules", len(X_cancer_nodules))
 
 
 X_benign_nodules, benign_diams = data.ndsb17_get_predicted_nodules(np.asarray([64,64,64]), patient_ids)
-benign_diams = [15 for x in benign_diams]
+benign_diams = [64 for x in benign_diams]
 
 gen = datagen.batch_generator_ab(vsize, patient_ids, X_benign_nodules[:-50], benign_diams[:-50], X_cancer_nodules[:-50], cancer_diams[:-50])
 
