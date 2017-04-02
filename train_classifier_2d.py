@@ -1,7 +1,7 @@
 import numpy as np
 from keras.models import Model
 from keras.optimizers import SGD, Adam, Nadam, RMSprop
-from keras.layers import Dense, Conv2D, GlobalAveragePooling2D, Flatten
+from keras.layers import Dense, Conv2D, GlobalAveragePooling2D, Flatten, Activation
 
 import data
 import datagen
@@ -74,8 +74,12 @@ history['argv'] = sys.argv
 model1 = xception.Xception(input_shape=(64,64,3), include_top=False)
 
 classes = 2
-x = GlobalAveragePooling2D(name='avg_pool')( model1.outputs[0] )
-x = Dense(classes, activation='softmax', name='predictions')(x)
+x = model1.layers[-17].output
+x = Conv2D(512, 2, 2, border_mode='valid', kernel_initializer='he_uniform')(x)
+x = Conv2D(512, 2, 2, border_mode='valid', kernel_initializer='he_uniform')(x)
+x = Conv2D(2, 2, 2, border_mode='valid', kernel_initializer='he_uniform', activation='linear')(x)
+x = Flatten()(x)
+x = Activation('softmax')(x)
 
 model = Model(model1.inputs, x, name='xception')
 print(model.summary())
