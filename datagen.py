@@ -111,7 +111,7 @@ def batch_generator(vsize, patient_ids, X_nodules, diams):
         yield X, y
 
 
-def batch_generator_ab(vsize, patient_ids, X_nodules_a, diams_a, X_nodules_b, diams_b):
+def batch_generator_ab(vsize, patient_ids, X_nodules_a, diams_a, X_nodules_b, diams_b, do_downsample=True):
     gen_a = sample_generator(vsize, patient_ids, X_nodules_a, diams_a)
     gen_b = sample_generator(vsize, patient_ids, X_nodules_b, diams_b)
     batch_size = 64
@@ -133,5 +133,6 @@ def batch_generator_ab(vsize, patient_ids, X_nodules_a, diams_a, X_nodules_b, di
             X[n,:,:,:,0] = volume
             n += 1
         X = (X - X_mean)/X_std
-        X = scipy.ndimage.interpolation.zoom(X, (1, 0.5, 0.5, 0.5, 1), order=1)
+        if do_downsample:
+            X = scipy.ndimage.interpolation.zoom(X, (1, 0.5, 0.5, 0.5, 1), order=1)
         yield X, y
