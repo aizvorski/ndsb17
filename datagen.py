@@ -116,7 +116,7 @@ def batch_generator_ab(vsize, patient_ids, X_nodules_a, diams_a, X_nodules_b, di
     gen_b = sample_generator(vsize, patient_ids, X_nodules_b, diams_b)
     batch_size = 64
     while True:
-        X = np.zeros((batch_size, 32,32,32,1), dtype=np.float32)
+        X = np.zeros((batch_size, vsize[0],vsize[1],vsize[2],1), dtype=np.float32)
         y = np.zeros((batch_size, 2), dtype=np.int)
         n = 0
         while n < batch_size:
