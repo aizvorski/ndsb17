@@ -75,23 +75,24 @@ model1 = xception.Xception(input_shape=(64,64,3), include_top=False)
 
 classes = 2
 x = model1.layers[-17].output
-x = Conv2D(512, 2, 2, border_mode='valid', kernel_initializer='he_uniform')(x)
-x = Conv2D(512, 2, 2, border_mode='valid', kernel_initializer='he_uniform')(x)
-x = Conv2D(2, 2, 2, border_mode='valid', kernel_initializer='he_uniform', activation='linear')(x)
+x = Conv2D(512, 2, 2, border_mode='valid', init='orthogonal')(x)
+x = Conv2D(512, 2, 2, border_mode='valid', init='orthogonal')(x)
+x = Conv2D(2, 2, 2, border_mode='valid', init='orthogonal', activation='linear')(x)
 x = Flatten()(x)
 x = Activation('softmax')(x)
 
 model = Model(model1.inputs, x, name='xception')
 print(model.summary())
 
-if config.optimizer == 'rmsprop':
-    optimizer = RMSprop(lr=config.lr)
-elif config.optimizer == 'adam':
-    optimizer = Adam(lr=config.lr)
-elif config.optimizer == 'nadam':
-    optimizer = Nadam(lr=config.lr)
-elif config.optimizer == 'sgd':
-    optimizer = SGD(lr=config.lr, momentum=0.9, nesterov=True)
+# if config.optimizer == 'rmsprop':
+#     optimizer = RMSprop(lr=config.lr)
+# elif config.optimizer == 'adam':
+#     optimizer = Adam(lr=config.lr)
+# elif config.optimizer == 'nadam':
+#     optimizer = Nadam(lr=config.lr)
+# elif config.optimizer == 'sgd':
+#     optimizer = SGD(lr=config.lr, momentum=0.9, nesterov=True)
+optimizer = Adam(lr=0.0001)
 
 model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=optimizer)
 # model.load_weights('/mnt/data/snap/config_baseline2__20170329095350.0050.h5')
