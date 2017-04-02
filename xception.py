@@ -124,29 +124,30 @@ def Xception(include_top=True, weights='imagenet',
     x = MaxPooling2D((3, 3), strides=(2, 2), border_mode='same', name='block2_pool')(x)
     x = merge([x, residual], mode='sum')
 
-    residual = Conv2D(256, 1, 1, subsample=(2, 2),
+    sz = 192
+    residual = Conv2D(sz, 1, 1, subsample=(2, 2),
                       border_mode='same', bias=False)(x)
     residual = BatchNormalization()(residual)
 
     x = Activation('relu', name='block3_sepconv1_act')(x)
-    x = SeparableConv2D(256, 3, 3, border_mode='same', bias=False, name='block3_sepconv1')(x)
+    x = SeparableConv2D(sz, 3, 3, border_mode='same', bias=False, name='block3_sepconv1')(x)
     x = BatchNormalization(name='block3_sepconv1_bn')(x)
     x = Activation('relu', name='block3_sepconv2_act')(x)
-    x = SeparableConv2D(256, 3, 3, border_mode='same', bias=False, name='block3_sepconv2')(x)
+    x = SeparableConv2D(sz, 3, 3, border_mode='same', bias=False, name='block3_sepconv2')(x)
     x = BatchNormalization(name='block3_sepconv2_bn')(x)
 
     x = MaxPooling2D((3, 3), strides=(2, 2), border_mode='same', name='block3_pool')(x)
     x = merge([x, residual], mode='sum')
 
-    residual = Conv2D(256, 1, 1, subsample=(2, 2),
+    residual = Conv2D(sz, 1, 1, subsample=(2, 2),
                       border_mode='same', bias=False)(x)
     residual = BatchNormalization()(residual)
 
     x = Activation('relu', name='block4_sepconv1_act')(x)
-    x = SeparableConv2D(256, 3, 3, border_mode='same', bias=False, name='block4_sepconv1')(x)
+    x = SeparableConv2D(sz, 3, 3, border_mode='same', bias=False, name='block4_sepconv1')(x)
     x = BatchNormalization(name='block4_sepconv1_bn')(x)
     x = Activation('relu', name='block4_sepconv2_act')(x)
-    x = SeparableConv2D(256, 3, 3, border_mode='same', bias=False, name='block4_sepconv2')(x)
+    x = SeparableConv2D(sz, 3, 3, border_mode='same', bias=False, name='block4_sepconv2')(x)
     x = BatchNormalization(name='block4_sepconv2_bn')(x)
 
     x = MaxPooling2D((3, 3), strides=(2, 2), border_mode='same', name='block4_pool')(x)
@@ -157,13 +158,13 @@ def Xception(include_top=True, weights='imagenet',
         prefix = 'block' + str(i + 5)
 
         x = Activation('relu', name=prefix + '_sepconv1_act')(x)
-        x = SeparableConv2D(256, 3, 3, border_mode='same', bias=False, name=prefix + '_sepconv1')(x)
+        x = SeparableConv2D(sz, 3, 3, border_mode='same', bias=False, name=prefix + '_sepconv1')(x)
         x = BatchNormalization(name=prefix + '_sepconv1_bn')(x)
         x = Activation('relu', name=prefix + '_sepconv2_act')(x)
-        x = SeparableConv2D(256, 3, 3, border_mode='same', bias=False, name=prefix + '_sepconv2')(x)
+        x = SeparableConv2D(sz, 3, 3, border_mode='same', bias=False, name=prefix + '_sepconv2')(x)
         x = BatchNormalization(name=prefix + '_sepconv2_bn')(x)
         x = Activation('relu', name=prefix + '_sepconv3_act')(x)
-        x = SeparableConv2D(256, 3, 3, border_mode='same', bias=False, name=prefix + '_sepconv3')(x)
+        x = SeparableConv2D(sz, 3, 3, border_mode='same', bias=False, name=prefix + '_sepconv3')(x)
         x = BatchNormalization(name=prefix + '_sepconv3_bn')(x)
 
         x = merge([x, residual], mode='sum')

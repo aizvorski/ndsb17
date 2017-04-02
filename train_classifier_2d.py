@@ -1,7 +1,7 @@
 import numpy as np
 from keras.models import Model
 from keras.optimizers import SGD, Adam, Nadam, RMSprop
-from keras.layers import Dense, Conv2D, GlobalAveragePooling2D, Flatten, Activation
+from keras.layers import Dense, Conv2D, SeparableConv2D, Flatten, Activation
 
 import data
 import datagen
@@ -71,13 +71,14 @@ history = {'loss':[], 'acc':[], 'val_loss':[], 'val_acc':[]}
 history['version'] = subprocess.check_output('git describe --always --dirty', shell=True).decode('ascii').strip()
 history['argv'] = sys.argv
 
-model1 = xception.Xception(input_shape=(64,64,3), include_top=False)
+model1 = xception.Xception(input_shape=(64,64,3), include_top=False, weights=None)
 
 classes = 2
 x = model1.layers[-17].output
-x = Conv2D(512, 2, 2, border_mode='valid', init='orthogonal')(x)
-x = Conv2D(512, 2, 2, border_mode='valid', init='orthogonal')(x)
-x = Conv2D(2, 2, 2, border_mode='valid', init='orthogonal', activation='linear')(x)
+x = SeparableConv2D(256, 3, 3, border_mode='valid', init='he_uniform')(x)
+x = SeparableConv2D(256, 3, 3, border_mode='valid', init='he_uniform')(x)
+x = SeparableConv2D(256, 3, 3, border_mode='valid', init='he_uniform')(x)
+x = Conv2D(2, 2, 2, border_mode='valid', init='he_uniform', activation='linear')(x)
 x = Flatten()(x)
 x = Activation('softmax')(x)
 
@@ -100,7 +101,7 @@ model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=o
 for e in range(config.num_epochs):
     h = model.fit_generator(
         gen_2d,
-        config.samples_per_epoch,
+        1000,
         nb_epoch=1,
         verbose=1,
         validation_data=(test_nodules_2d, test_y))
