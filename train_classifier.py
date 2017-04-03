@@ -7,7 +7,7 @@ import datagen
 import net
 
 import random
-import scipy.ndimage.interpolation
+import skimage.transform
 import json
 import pickle
 
@@ -43,7 +43,7 @@ gen = datagen.batch_generator_ab(vsize, patient_ids, X_benign_nodules[:-50], ben
 
 test_nodules = np.stack(X_benign_nodules[-50:] + X_cancer_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
 test_nodules = datagen.preprocess(test_nodules)
-test_nodules = scipy.ndimage.interpolation.zoom(test_nodules, (1, 0.5, 0.5, 0.5, 1), order=1)
+test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
 test_y = np.zeros((test_nodules.shape[0], 2), dtype=np.int)
 test_y[:50,0] = 1
 test_y[50:,1] = 1
