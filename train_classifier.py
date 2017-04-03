@@ -45,7 +45,7 @@ test_nodules = np.stack(X_benign_nodules[-50:] + X_cancer_nodules[-50:])[:,16:16
 test_nodules = datagen.preprocess(test_nodules)
 test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
 test_y = np.zeros((test_nodules.shape[0], 1), dtype=np.int)
-test_y[50:,1] = 1
+test_y[50:] = 1
 
 history = {'loss':[], 'acc':[], 'val_loss':[], 'val_acc':[]}
 history['version'] = subprocess.check_output('git describe --always --dirty', shell=True).decode('ascii').strip()
