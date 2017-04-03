@@ -44,8 +44,7 @@ gen = datagen.batch_generator_ab(vsize, patient_ids, X_benign_nodules[:-50], ben
 test_nodules = np.stack(X_benign_nodules[-50:] + X_cancer_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
 test_nodules = datagen.preprocess(test_nodules)
 test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
-test_y = np.zeros((test_nodules.shape[0], 2), dtype=np.int)
-test_y[:50,0] = 1
+test_y = np.zeros((test_nodules.shape[0], 1), dtype=np.int)
 test_y[50:,1] = 1
 
 history = {'loss':[], 'acc':[], 'val_loss':[], 'val_acc':[]}
@@ -64,7 +63,7 @@ elif config.optimizer == 'nadam':
 elif config.optimizer == 'sgd':
     optimizer = SGD(lr=config.lr, momentum=0.9, nesterov=True)
 
-model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=optimizer)
+model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=optimizer)
 # model.load_weights('/mnt/data/snap/config_baseline2__20170329095350.0050.h5')
 
 for e in range(config.num_epochs):
