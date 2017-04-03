@@ -7,7 +7,7 @@ import datagen
 import net
 
 import random
-import scipy.ndimage.interpolation
+import skimage.transform
 import json
 
 import sys
@@ -48,7 +48,7 @@ patient_ids_noncancer = data.ndsb17_get_patient_ids_noncancer()
 # FIXME crop because expanded margin for rotation
 test_nodules = np.stack(X_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
 test_nodules = datagen.preprocess(test_nodules)
-test_nodules = scipy.ndimage.interpolation.zoom(test_nodules, (1, 0.5, 0.5, 0.5, 1), order=1)
+test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
 
 test_volumes = []
 
@@ -58,7 +58,7 @@ for n in range(10):
     # info = data.ndsb17_get_info(pid)
     test_volume = random_volume(image, (128,128,128))
     test_volume = datagen.preprocess(test_volume)
-    test_volume = scipy.ndimage.interpolation.zoom(test_volume, (0.5, 0.5, 0.5), order=1)
+    test_volume = skimage.transform.downscale_local_mean(test_volume, (1,2,2,2,1), clip=False)
     test_volumes.append(test_volume)
 
 test_volumes = np.stack(test_volumes)[...,None]
