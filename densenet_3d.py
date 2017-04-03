@@ -1,7 +1,7 @@
 import warnings
 
 from keras.models import Model
-from keras.layers.core import Dense, Dropout, Activation
+from keras.layers.core import Dense, Dropout, Activation, Flatten
 from keras.layers.convolutional import Convolution3D
 from keras.layers.pooling import AveragePooling3D
 from keras.layers.pooling import GlobalAveragePooling3D
@@ -343,7 +343,13 @@ def __create_dense_net(nb_classes, img_input, include_top, depth=40, nb_dense_bl
     x = BatchNormalization(mode=0, axis=concat_axis, gamma_regularizer=l2(weight_decay),
                            beta_regularizer=l2(weight_decay))(x)
     x = Activation('relu')(x)
-    x = GlobalAveragePooling3D()(x)
+    # x = GlobalAveragePooling3D()(x)
+
+    x = Convolution3D(256, 3, 3, 3, init="he_uniform", border_mode="valid", activation='relu', W_regularizer=l2(weight_decay))(x)
+    x = BatchNormalization()(x)
+    x = Convolution3D(nb_classes, 2, 2, 2, init="he_uniform", border_mode="valid", activation='linear', W_regularizer=l2(weight_decay))(x)
+    x = Flatten()(x)
+    x = Activation('softmax')(x)
 
     if include_top:
         x = Dense(nb_classes, activation=activation, W_regularizer=l2(weight_decay), b_regularizer=l2(weight_decay))(x)
