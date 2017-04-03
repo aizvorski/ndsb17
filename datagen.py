@@ -115,19 +115,19 @@ def batch_generator_ab(vsize, patient_ids, X_nodules_a, diams_a, X_nodules_b, di
     batch_size = 64
     while True:
         X = np.zeros((batch_size, 32,32,32,1), dtype=np.float32)
-        y = np.zeros((batch_size, 2), dtype=np.int)
+        y = np.zeros((batch_size, 1), dtype=np.int)
         n = 0
         while n < batch_size:
             if np.random.random() < 0.5:
                 volume, is_augmented = next(gen_a)
                 if not is_augmented: 
                     continue
-                y[n,0] = 1
+                y[n] = 0
             else:
                 volume, is_augmented = next(gen_b)
                 if not is_augmented: 
                     continue
-                y[n,1] = 1
+                y[n] = 1
             X[n,:,:,:,0] = volume
             n += 1
         X = (X - X_mean)/X_std
