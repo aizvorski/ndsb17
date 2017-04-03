@@ -27,17 +27,22 @@ def volume_crop(volume, vsize):
     return volume[p0:p0+vsize[0], p1:p1+vsize[1], p2:p2+vsize[2] ]
 
 
+def volume_flip(volume):
+    if random.choice([True, False]):
+        volume = volume[::-1,:,:]
+    if random.choice([True, False]):
+        volume = volume[:,::-1,:]
+    if random.choice([True, False]):
+        volume = volume[:,:,::-1]
+    return volume
+
+
 def make_augmented(vsize, volume, X_nodules, diams, do_flip=True, do_rotate=True):
     idx = random.choice(range(len(X_nodules)))
     nodule = X_nodules[idx]
     # randomly flip or not flip each axis
     if do_flip:
-        if random.choice([True, False]):
-            nodule = nodule[::-1,:,:]
-        if random.choice([True, False]):
-            nodule = nodule[:,::-1,:]
-        if random.choice([True, False]):
-            nodule = nodule[:,:,::-1]
+        nodule = volume_flip(nodule)
     if do_rotate:
         nodule = volume_rotation(nodule, np.random.randint(0,360))
     nodule = volume_crop(nodule, vsize)
