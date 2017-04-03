@@ -4,7 +4,8 @@ from keras.optimizers import SGD, Adam, Nadam, RMSprop
 
 import data
 import datagen
-import net
+#import net
+import densenet_3d
 
 import random
 import scipy.ndimage.interpolation
@@ -52,8 +53,19 @@ history = {'loss':[], 'acc':[], 'val_loss':[], 'val_acc':[]}
 history['version'] = subprocess.check_output('git describe --always --dirty', shell=True).decode('ascii').strip()
 history['argv'] = sys.argv
 
-model = net.model3d((16, 16, 16), sz=config.feature_sz, alpha=config.feature_alpha)
+
+depth = 40
+nb_dense_block = 3
+growth_rate = 12
+nb_filter = 16
+dropout_rate = 0.0
+
+nb_classes = 2
+
+model = densenet_3d.DenseNet(input_shape=(16, 16, 16, 1), classes=nb_classes, depth=depth, nb_dense_block=nb_dense_block,
+                 growth_rate=growth_rate, nb_filter=nb_filter, dropout_rate=dropout_rate, weights=None, bottleneck=True, reduction=0.5)
 print(model.summary())
+
 
 if config.optimizer == 'rmsprop':
     optimizer = RMSprop(lr=config.lr)
@@ -70,7 +82,7 @@ model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=o
 for e in range(config.num_epochs):
     h = model.fit_generator(
         gen,
-        config.samples_per_epoch,
+        1000, # config.samples_per_epoch,
         nb_epoch=1,
         verbose=1,
         validation_data=(test_nodules, test_y))
