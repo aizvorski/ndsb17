@@ -32,12 +32,12 @@ df_nodes = df_nodes[(df_nodes["diameter_mm"]>10)]
 patient_ids = data.ndsb17_get_patient_ids_noncancer()
 
 X_cancer_nodules, cancer_diams = data.ndsb17_get_all_nodules(np.asarray([64,64,64]), df_nodes)
-#X_cancer_nodules = [x for x in X_cancer_nodules if x.shape == (64,64,64)] # FIXME not all results are full size
 print("cancer nodules", len(X_cancer_nodules))
 
 
 X_benign_nodules, benign_diams = data.ndsb17_get_predicted_nodules(np.asarray([64,64,64]), patient_ids)
 benign_diams = [64 for x in benign_diams]
+print("benign nodules", len(X_benign_nodules))
 
 gen = datagen.batch_generator_ab(vsize, patient_ids, X_benign_nodules[:-50], benign_diams[:-50], X_cancer_nodules[:-50], cancer_diams[:-50])
 
@@ -78,6 +78,8 @@ for e in range(config.num_epochs):
     print(h.history)
     history['loss'].append(h.history['loss'][0])
     history['acc'].append(h.history['acc'][0])
+    history['val_loss'].append(h.history['val_loss'][0])
+    history['val_acc'].append(h.history['val_acc'][0])
 
     model.save_weights(SNAP_PATH + run_id + '.{:04d}'.format(e) + '.h5')
 
