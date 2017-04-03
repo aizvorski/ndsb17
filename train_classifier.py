@@ -82,7 +82,7 @@ model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=o
 for e in range(config.num_epochs):
     h = model.fit_generator(
         gen,
-        1000, # config.samples_per_epoch,
+        config.samples_per_epoch,
         nb_epoch=1,
         verbose=1,
         validation_data=(test_nodules, test_y))
