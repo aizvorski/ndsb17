@@ -39,11 +39,11 @@ X_benign_nodules, benign_diams = data.ndsb17_get_predicted_nodules(np.asarray([6
 benign_diams = [64 for x in benign_diams]
 print("benign nodules", len(X_benign_nodules))
 
-gen = datagen.batch_generator_ab(vsize, patient_ids, X_benign_nodules[:-50], benign_diams[:-50], X_cancer_nodules[:-50], cancer_diams[:-50])
+gen = datagen.batch_generator_ab(vsize, patient_ids, X_benign_nodules[:-50], benign_diams[:-50], X_cancer_nodules[:-50], cancer_diams[:-50], do_downscale=False)
 
 test_nodules = np.stack(X_benign_nodules[-50:] + X_cancer_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
 test_nodules = datagen.preprocess(test_nodules)
-test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
+#test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
 test_y = np.zeros((test_nodules.shape[0], 2), dtype=np.int)
 test_y[:50,0] = 1
 test_y[50:,1] = 1
@@ -52,7 +52,7 @@ history = {'loss':[], 'acc':[], 'val_loss':[], 'val_acc':[]}
 history['version'] = subprocess.check_output('git describe --always --dirty', shell=True).decode('ascii').strip()
 history['argv'] = sys.argv
 
-model = net.model3d((16, 16, 16), sz=config.feature_sz, alpha=config.feature_alpha)
+model = net.model3d((32, 32, 32), sz=config.feature_sz, alpha=config.feature_alpha)
 print(model.summary())
 
 if config.optimizer == 'rmsprop':
