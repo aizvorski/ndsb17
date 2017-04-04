@@ -54,7 +54,8 @@ def sample_generator_ab(vsize, patient_ids, X_nodules_a, diams_a, X_nodules_b, d
             fidx, patch_coords = index_image(image)
 
             for k in range(100):
-                if np.random.choice([True,False]):
+                label = np.random.choice([0,1])
+                if label == 0:
                     n = np.random.choice(len(X_nodules_a))
                     nodule = X_nodules_a[n]
                     diam = diams_a[n]
@@ -74,7 +75,20 @@ def sample_generator_ab(vsize, patient_ids, X_nodules_a, diams_a, X_nodules_b, d
                 mask = data.compose_make_mask(vsize, diam=diam+6, sigma=(diam+6)/8)
                 volume_aug = data.compose_max2(volume, nodule, mask)
 
-                yield(volume_aug)
+                yield volume_aug, label
 
 
 def batch_generator_ab(vsize, patient_ids, X_nodules_a, diams_a, X_nodules_b, diams_b):
+    gen = sample_generator_ab(vsize, patient_ids, X_nodules_a, diams_a, X_nodules_b, diams_b)
+    while True:
+        X = np.zeros((batch_size,) + vsize + (1,), dtype=np.float32)
+        y = np.zeros((batch_size, 2), dtype=np.int)
+        n = 0
+        while n < batch_size:
+            volume, label = next(gen)
+            X[n,:,:,:,1] = volume
+            if label == 0:
+                y[n,0] = 1
+            else:
+                y[n,1] = 1
+        yield X, y
