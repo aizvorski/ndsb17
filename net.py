@@ -19,13 +19,19 @@ def model3d(vsize, sz=48, alpha=1.5, do_features=False):
     x = BatchNormalization()(x)
 
     sz = int(sz * alpha)
-    x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
+    if vsize == (32,32,32):
+        x = Convolution3D(sz, 3, 3, 3, subsample=(2,2,2), **conv3dparams())(x)
+    else:
+        x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
     x = BatchNormalization()(x)
     x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
     x = BatchNormalization()(x)
     x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
     x = BatchNormalization()(x)
-    x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
+    if vsize == (32,32,32):
+        x = Convolution3D(sz, 3, 3, 3, **conv3dparams())(x)
+    else:
+        x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
     x = BatchNormalization()(x)
     x = SpatialDropout3D(0.2)(x)
 
