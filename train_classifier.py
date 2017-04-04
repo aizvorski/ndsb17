@@ -56,8 +56,8 @@ history['argv'] = sys.argv
 
 depth = 40
 nb_dense_block = 3
-growth_rate = 12
-nb_filter = 16
+growth_rate = 16
+nb_filter = 48
 dropout_rate = 0.0
 
 nb_classes = 2
