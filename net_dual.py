@@ -65,10 +65,10 @@ def model3d_layers(sz=48, alpha=1.5, do_features=False):
     layers.append( "BatchNormalization" )
     layers.append( Convolution3D(sz, 1, 1, 1, **conv3dparams()) )
     layers.append( "BatchNormalization" )
-    layers.append( Convolution3D(2, 1, 1, 1, **conv3dparams(activation='linear', border_mode='same')) )
+    layers.append( Convolution3D(1, 1, 1, 1, **conv3dparams(activation='linear', border_mode='same')) )
 
     layers.append( GlobalMaxPooling3D() )
-    layers.append( Activation('softmax') )
+    layers.append( Activation('sigmoid') )
 
 
     return layers

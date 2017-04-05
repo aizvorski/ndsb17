@@ -43,21 +43,21 @@ def random_volume(image, vsize):
 def volume_batch_generator(vsize, patient_ids, batch_size=64, do_downscale=True):
     while True:
         X = np.zeros((batch_size,) + vsize + (1,), dtype=np.float32)
-        y = np.zeros((batch_size, 2), dtype=np.int)
+        y = np.zeros((batch_size,), dtype=np.int)
 
         for n in range(batch_size):
             pid = np.random.choice(patient_ids)
             image = data.ndsb17_get_image(pid)
             volume = random_volume(image, vsize)
             X[n,:,:,:,0] = volume
-            y[n,0] = 1
+            y[n] = 1
 
         if do_downscale:
             X = skimage.transform.downscale_local_mean(X, (1,2,2,2,1), clip=False)
         X = datagen.preprocess(X)
         yield X, y
 
-volume_gen = volume_batch_generator((128,128,32), patient_ids, batch_size=8)
+volume_gen = volume_batch_generator((128,128,64), patient_ids, batch_size=4)
 
 
 # FIXME pass nodules split as input
@@ -105,7 +105,7 @@ layers = net_dual.model3d_layers(sz=32, alpha=1.5)
 model = net_dual.model3d_build((16, 16, 16), layers)
 print(model.summary())
 
-volume_model = net_dual.model3d_build((64, 64, 16), layers)
+volume_model = net_dual.model3d_build((64, 64, 32), layers)
 print(volume_model.summary())
 
 # if config.optimizer == 'rmsprop':
@@ -117,8 +117,8 @@ print(volume_model.summary())
 # elif config.optimizer == 'sgd':
 #     optimizer = SGD(lr=config.lr, momentum=0.9, nesterov=True)
 
-model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=Adam(lr=config.lr))
-volume_model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=Adam(lr=config.lr))
+model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=Adam(lr=config.lr))
+volume_model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=Adam(lr=config.lr))
 
 for e in range(10000):
     # h = model.fit_generator(
