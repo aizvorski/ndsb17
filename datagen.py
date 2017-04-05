@@ -98,9 +98,9 @@ def sample_generator(vsize, patient_ids, X_nodules, diams):
         yield volume, is_augmented
 
 
-def batch_generator(vsize, patient_ids, X_nodules, diams):
+def batch_generator(vsize, patient_ids, X_nodules, diams, batch_size=64, do_downscale=True):
     gen = sample_generator(vsize, patient_ids, X_nodules, diams)
-    batch_size = 64
+    
     while True:
         X = np.zeros((batch_size, 32,32,32,1), dtype=np.float32)
         y = np.zeros((batch_size, 2), dtype=np.int)
@@ -112,14 +112,15 @@ def batch_generator(vsize, patient_ids, X_nodules, diams):
             else:
                 y[n,0] = 1
         X = (X - X_mean)/X_std
-        X = skimage.transform.downscale_local_mean(X, (1,2,2,2,1), clip=False)
+        if do_downscale:
+            X = skimage.transform.downscale_local_mean(X, (1,2,2,2,1), clip=False)
         yield X, y
 
 
-def batch_generator_ab(vsize, patient_ids, X_nodules_a, diams_a, X_nodules_b, diams_b, do_downscale=True):
+def batch_generator_ab(vsize, patient_ids, X_nodules_a, diams_a, X_nodules_b, diams_b, batch_size=64, do_downscale=True):
     gen_a = sample_generator(vsize, patient_ids, X_nodules_a, diams_a)
     gen_b = sample_generator(vsize, patient_ids, X_nodules_b, diams_b)
-    batch_size = 64
+    
     while True:
         X = np.zeros((batch_size, 32,32,32,1), dtype=np.float32)
         y = np.zeros((batch_size, 2), dtype=np.int)

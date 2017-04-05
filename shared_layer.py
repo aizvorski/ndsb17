@@ -1,3 +1,5 @@
+# https://keras.io/getting-started/functional-api-guide/#shared-layers
+
 from keras.models import Model
 from keras.layers import Input, Convolution2D, GlobalAveragePooling2D, Dense
 import numpy as np
