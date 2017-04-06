@@ -12,14 +12,8 @@ import data
 import datagen
 
 
-config_name = sys.argv[1]
-config = importlib.import_module(config_name)
-
-weights_file = sys.argv[2]
-
 #volume_model = net.model3d((64, 64, 64), sz=config.feature_sz, alpha=config.feature_alpha, do_features=True)
 
-df = data.ndsb17_get_df_labels()
 
 config_label_threshold = 2
 
@@ -44,14 +38,14 @@ def predict_localizer(pid):
     predicted_image = net.tiled_predict(volume_model, image_2mm)[:,:,:,0]
     np.save('/mnt/data/ndsb17/predict/' + pid + '.npy', predicted_image)
 
-    predicted_image *= segmented_image_2mm
+    predicted_masked = predicted_image * segmented_image_2mm
 
     selem = np.ones((3,3,3), dtype=int)
-    labeled_array, num_features = scipy.ndimage.measurements.label( predicted_image > config_label_threshold, structure=selem )
+    labeled_array, num_features = scipy.ndimage.measurements.label( predicted_masked > config_label_threshold, structure=selem )
     label_boxes = scipy.ndimage.measurements.find_objects(labeled_array)
-    label_sizes = scipy.ndimage.measurements.sum(np.ones(predicted_image.shape, dtype=int), labeled_array, index=range(num_features+1))
-    label_activities_sum = scipy.ndimage.measurements.sum(predicted_image, labeled_array, index=range(num_features+1))
-    label_activities_max = scipy.ndimage.measurements.maximum(predicted_image, labeled_array, index=range(num_features+1))
+    label_sizes = scipy.ndimage.measurements.sum(np.ones(predicted_masked.shape, dtype=int), labeled_array, index=range(num_features+1))
+    label_activities_sum = scipy.ndimage.measurements.sum(predicted_masked, labeled_array, index=range(num_features+1))
+    label_activities_max = scipy.ndimage.measurements.maximum(predicted_masked, labeled_array, index=range(num_features+1))
     label_boxes = [None] + label_boxes
 
     for idx in np.argsort(label_activities_sum)[::-1][:5]:
@@ -60,6 +54,11 @@ def predict_localizer(pid):
     with open('/mnt/data/ndsb17/predict/boxes/' + pid + '.pkl', 'wb') as fh:
         pickle.dump( (label_boxes, label_sizes, label_activities_sum, label_activities_max), fh )
 
+    return predicted_image, (label_boxes, label_sizes, label_activities_sum, label_activities_max)
+
+
+def predict_localizer_for_map(pid):
+    predict_localizer(pid)
 
 
 def gpu_init(queue):
@@ -87,16 +86,24 @@ def gpu_init(queue):
 #     process = multiprocessing.current_process()
 #     return (gpu_id, process.pid, x * x)
 
-manager = multiprocessing.Manager()
-gpu_init_queue = manager.Queue()
 
-num_gpu = 2
-for i in range(num_gpu):
-    gpu_init_queue.put(i)
+if __name__ == "__main__":
+    config_name = sys.argv[1]
+    config = importlib.import_module(config_name)
 
-p = multiprocessing.Pool(num_gpu, gpu_init, (gpu_init_queue,))
+    weights_file = sys.argv[2]
 
 
-patient_ids = data.ndsb17_get_patient_ids()
+    manager = multiprocessing.Manager()
+    gpu_init_queue = manager.Queue()
 
-p.map(predict_localizer, patient_ids)
+    num_gpu = 2
+    for i in range(num_gpu):
+        gpu_init_queue.put(i)
+
+    p = multiprocessing.Pool(num_gpu, gpu_init, (gpu_init_queue,))
+
+
+    patient_ids = data.ndsb17_get_patient_ids()
+
+    p.map(predict_localizer_for_map, patient_ids)
