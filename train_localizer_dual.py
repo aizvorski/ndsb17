@@ -33,7 +33,7 @@ patient_ids = data.ndsb17_get_patient_ids_noncancer()
 X_nodules, diams = data.ndsb17_get_all_nodules(np.asarray([64,64,64]), df_nodes)
 print("nodules", len(X_nodules))
 
-gen = datagen.batch_generator(vsize, patient_ids, X_nodules[:-50], diams[:-50])
+gen = datagen.batch_generator(vsize, patient_ids, X_nodules[:-50], diams[:-50], batch_size=64)
 
 def random_volume(image, vsize):
     pos = np.asarray([ np.random.randint(k, image.shape[k] - vsize[k]) for k in range(3) ])
@@ -43,21 +43,36 @@ def random_volume(image, vsize):
 def volume_batch_generator(vsize, patient_ids, batch_size=64, do_downscale=True):
     while True:
         X = np.zeros((batch_size,) + vsize + (1,), dtype=np.float32)
-        y = np.zeros((batch_size, 2), dtype=np.int)
+        y = np.zeros((batch_size,), dtype=np.int)
 
-        for n in range(batch_size):
-            pid = np.random.choice(patient_ids)
-            image = data.ndsb17_get_image(pid)
-            volume = random_volume(image, vsize)
+        n = 0
+        while n < batch_size:
+
+            pid = random.choice(patient_ids)
+            try:
+                image = data.ndsb17_get_image(pid)
+                segmented_image = data.ndsb17_get_segmented_image(pid)
+            except FileNotFoundError as e:
+                continue
+
+            pos = np.asarray([ np.random.randint(k, image.shape[k] - vsize[k]) for k in range(3) ])
+            segmented_volume = segmented_image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
+            is_lung = True
+            if np.count_nonzero(segmented_volume) == 0:
+                is_lung = False
+                continue
+            volume = image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
+
             X[n,:,:,:,0] = volume
-            y[n,0] = 1
+            y[n] = 1
+            n += 1
 
         if do_downscale:
             X = skimage.transform.downscale_local_mean(X, (1,2,2,2,1), clip=False)
         X = datagen.preprocess(X)
         yield X, y
 
-volume_gen = volume_batch_generator((128,128,32), patient_ids, batch_size=8)
+volume_gen = volume_batch_generator((96,96,96), patient_ids, batch_size=6)
 
 
 # FIXME pass nodules split as input
@@ -105,7 +120,7 @@ layers = net_dual.model3d_layers(sz=32, alpha=1.5)
 model = net_dual.model3d_build((16, 16, 16), layers)
 print(model.summary())
 
-volume_model = net_dual.model3d_build((64, 64, 16), layers)
+volume_model = net_dual.model3d_build((48, 48, 48), layers)
 print(volume_model.summary())
 
 # if config.optimizer == 'rmsprop':
@@ -117,19 +132,22 @@ print(volume_model.summary())
 # elif config.optimizer == 'sgd':
 #     optimizer = SGD(lr=config.lr, momentum=0.9, nesterov=True)
 
-model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=Adam(lr=config.lr))
-volume_model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=Adam(lr=config.lr))
+model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=Adam(lr=0.001))
+volume_model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=Adam(lr=0.001))
 
 for e in range(10000):
-    # h = model.fit_generator(
-    #     gen,
-    #     config.samples_per_epoch,
-    #     nb_epoch=1,
-    #     verbose=1)
+    h = model.fit_generator(
+        gen,
+        1000,
+        nb_epoch=1,
+        verbose=1)
 
     X, y = next(gen)
     (loss, acc) = model.train_on_batch(X, y)
     print("model", loss, acc)
+
+    model.save_weights(SNAP_PATH + run_id + '.tmp.h5')
+    volume_model.load_weights(SNAP_PATH + run_id + '.tmp.h5')
 
     X, y = next(volume_gen)
     (loss, acc) = volume_model.train_on_batch(X, y)
@@ -143,7 +161,7 @@ for e in range(10000):
     # history['p_threshold'].append(float(p_threshold))
     # history['p_list'].append([ float(x) for x in p_list])
 
-    # model.save_weights(SNAP_PATH + run_id + '.{:04d}'.format(e) + '.h5')
+    model.save_weights(SNAP_PATH + run_id + '.{:04d}'.format(e) + '.h5')
 
     # with open(SNAP_PATH + run_id + '.log.json', 'w') as fh:
     #     json.dump(history, fh)
