@@ -1,14 +1,16 @@
-import data
-import datagen
-import net
-import skimage.transform
 import numpy as np
 import pandas as pd
+import scipy
+import skimage.transform
 import pickle
 import os
 import sys
 import importlib
-import scipy
+import multiprocessing
+
+import data
+import datagen
+
 
 config_name = sys.argv[1]
 config = importlib.import_module(config_name)
@@ -16,14 +18,18 @@ config = importlib.import_module(config_name)
 weights_file = sys.argv[2]
 
 #volume_model = net.model3d((64, 64, 64), sz=config.feature_sz, alpha=config.feature_alpha, do_features=True)
-volume_model = net.model3d((64, 64, 64), sz=32, alpha=1.5, do_features=True)
-volume_model.load_weights(weights_file)
 
 df = data.ndsb17_get_df_labels()
 
 config_label_threshold = 2
 
-def predict_regions(pid):
+def predict_localizer(pid):
+    global gpu_id
+    global volume_model
+    import net
+
+    print(gpu_id, pid)
+
     # if os.path.exists('/mnt/data/ndsb17/predict/boxes/' + pid + '.pkl'):
     #     return
 
@@ -54,11 +60,43 @@ def predict_regions(pid):
     with open('/mnt/data/ndsb17/predict/boxes/' + pid + '.pkl', 'wb') as fh:
         pickle.dump( (label_boxes, label_sizes, label_activities_sum, label_activities_max), fh )
 
-for n in range(len(df)):
-    pid = df["id"][n]
-    print(pid, df["cancer"][n])
 
-    try:
-        predict_regions(pid)
-    except Exception as e:
-        print(str(e))
+
+def gpu_init(queue):
+    global gpu_id
+    gpu_id = queue.get()
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+
+    import tensorflow as tf
+
+    from tensorflow.python.client import device_lib
+    local_device_protos = device_lib.list_local_devices()
+    gpu_list = [x.name for x in local_device_protos if x.device_type == 'GPU']
+    process = multiprocessing.current_process()
+    print(gpu_id, process.pid, gpu_list)
+
+    global volume_model
+    import net
+    volume_model = net.model3d((64, 64, 64), sz=32, alpha=1.5, do_features=True)
+    volume_model.load_weights(weights_file)
+
+
+# def f(x):
+#     global gpu_id
+
+#     process = multiprocessing.current_process()
+#     return (gpu_id, process.pid, x * x)
+
+manager = multiprocessing.Manager()
+gpu_init_queue = manager.Queue()
+
+num_gpu = 2
+for i in range(num_gpu):
+    gpu_init_queue.put(i)
+
+p = multiprocessing.Pool(num_gpu, gpu_init, (gpu_init_queue,))
+
+
+patient_ids = data.ndsb17_get_patient_ids()
+
+p.map(predict_localizer, patient_ids)
