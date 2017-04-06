@@ -80,6 +80,7 @@ def model3d_build(vsize, layers):
 
     for f in layers:
         if f == "BatchNormalization":
+            #continue
             f = BatchNormalization()
         x = f(x)
 
