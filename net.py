@@ -64,7 +64,7 @@ def model3d(vsize, sz=48, alpha=1.5, do_features=False):
     x = BatchNormalization()(x)
     x = Convolution3D(sz, 1, 1, 1, **conv3dparams())(x)
     x = BatchNormalization()(x)
-    x = Convolution3D(2, 1, 1, 1, **conv3dparams(activation='linear', border_mode='same'))(x)
+    x = Convolution3D(1, 1, 1, 1, **conv3dparams(activation='linear', border_mode='same'))(x)
     if not do_features:
         x = Flatten()(x)
         x = Activation('softmax')(x)
@@ -79,7 +79,6 @@ def tiled_predict(model, image):
     d = 64
     m = 8
     full_result = np.zeros((image.shape[0]+d, image.shape[1]+d, image.shape[2]+d, 2), dtype=np.float32)
-    full_result[:,:,:,0] = 1e+6
     for i in range(0, int(np.ceil(image.shape[0]/s))):
         for j in range(0, int(np.ceil(image.shape[1]/s))):
             for k in range(0, int(np.ceil(image.shape[2]/s))):
