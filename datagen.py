@@ -93,6 +93,10 @@ def sample_generator(vsize, patient_ids, X_nodules, diams):
 #         density = np.mean(volume)
         central_density = np.mean((volume+1000) * central_mask) / np.mean(central_mask) - 1000
     
+        if central_density >= -500 and is_lung:
+            if np.random.random() > 0.1:
+                continue
+
         is_augmented = False
         if central_density < -500 and is_lung and np.random.choice([True, False]):
             idx = np.random.choice(range(len(X_nodules)))
