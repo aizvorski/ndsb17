@@ -67,7 +67,7 @@ def model3d(vsize, sz=48, alpha=1.5, do_features=False):
     x = Convolution3D(1, 1, 1, 1, **conv3dparams(activation='linear', border_mode='same'))(x)
     if not do_features:
         x = Flatten()(x)
-        x = Activation('softmax')(x)
+        x = Activation('sigmoid')(x)
 
     model = Model(input=inputs, output=x)
 
