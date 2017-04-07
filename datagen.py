@@ -113,7 +113,7 @@ def batch_generator(vsize, patient_ids, X_nodules, diams, batch_size=64, do_down
     while True:
         X = np.zeros((batch_size, 32,32,32,1), dtype=np.float32)
         #y = np.zeros((batch_size, 2), dtype=np.int)
-        y = np.zeros((batch_size), dtype=np.int)
+        y = np.zeros((batch_size,), dtype=np.int)
         for n in range(batch_size//2):
             volume, is_augmented = next(gen)
             if not is_augmented:

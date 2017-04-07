@@ -78,15 +78,15 @@ def tiled_predict(model, image):
     s = 49
     d = 64
     m = 8
-    full_result = np.zeros((image.shape[0]+d, image.shape[1]+d, image.shape[2]+d, 2), dtype=np.float32)
+    full_result = np.zeros((image.shape[0]+d, image.shape[1]+d, image.shape[2]+d), dtype=np.float32)
     for i in range(0, int(np.ceil(image.shape[0]/s))):
         for j in range(0, int(np.ceil(image.shape[1]/s))):
             for k in range(0, int(np.ceil(image.shape[2]/s))):
                 input_ = image[i*s:i*s+d,j*s:j*s+d,k*s:k*s+d]
                 if input_.shape != (d,d,d):
                     input_ = np.pad(input_, ((0, d-input_.shape[0]), (0, d-input_.shape[1]), (0, d-input_.shape[2])), 'constant')
-                result = model.predict(input_.reshape((1,d,d,d,1)), batch_size=1)
-                full_result[i*s+m:(i+1)*s+m, j*s+m:(j+1)*s+m, k*s+m:(k+1)*s+m,:] = result
+                result = model.predict(input_.reshape((1,d,d,d,1)), batch_size=1)[:,:,:,0]
+                full_result[i*s+m:(i+1)*s+m, j*s+m:(j+1)*s+m, k*s+m:(k+1)*s+m] = result
     return full_result[0:image.shape[0], 0:image.shape[1], 0:image.shape[2]]
 
 
@@ -99,3 +99,7 @@ def softmax_activations(x):
     p = np.exp(r - r_max) / r_sum
     p = p.reshape(x.shape)
     return p
+
+
+def sigmoid_activations(x):  
+    return np.exp(-np.logaddexp(0, -x))
