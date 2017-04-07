@@ -23,9 +23,11 @@ config = importlib.import_module(config_name)
 
 fold = int(sys.argv[2])
 
-localizer_output_dir = sys.argv[3]
+localizer_weights_file = sys.argv[3]
 
-weights_file = sys.argv[4]
+localizer_output_dir = sys.argv[4]
+
+weights_file = sys.argv[5]
 
 run_id = 'classifier' + '__' + config_name + '__' + datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
 print(run_id)
@@ -44,17 +46,29 @@ print("cancer nodules", len(X_cancer_nodules))
 X_localizer_nodules = data.ndsb17_get_predicted_nodules(np.asarray([64,64,64]), patient_ids, SNAP_PATH+localizer_output_dir)
 print("localizer nodules", len(X_localizer_nodules))
 
+# df_benign = data.ndsb17_get_df_nodes(cancer_label=0)
+# X_benign_nodules, benign_diams = data.ndsb17_get_all_nodules(np.asarray([64,64,64]), df_benign)
+# print("benign nodules", len(X_benign_nodules))
+
+X_localizer_nodules = [x for x in X_localizer_nodules if x.shape == (64,64,64)]
+X_cancer_nodules = [x for x in X_cancer_nodules if x.shape == (64,64,64)]
+#X_benign_nodules = [x for x in X_benign_nodules if x.shape == (64,64,64)]
+
 def batch_generator_ab(vsize, X_nodules_a, X_nodules_b, batch_size=64, do_downscale=True):
     while True:
-        X = np.zeros((batch_size,) + vsize + (1,), dtype=np.float32)
+        X = np.zeros((batch_size,) + tuple(vsize) + (1,), dtype=np.float32)
         y = np.zeros((batch_size), dtype=np.int)
         n = 0
         while n < batch_size:
             if np.random.choice([True, False]):
-                volume = datagen.make_augmented(vsize, np.random.choice(X_nodules_a))
+                idx = np.random.choice(len(X_nodules_a))
+                volume = X_nodules_a[idx]
+                volume = datagen.make_augmented(vsize, volume)
                 y[n] = 0
             else:
-                volume = datagen.make_augmented(vsize, np.random.choice(X_nodules_b))
+                idx = np.random.choice(len(X_nodules_b))
+                volume = X_nodules_b[idx]
+                volume = datagen.make_augmented(vsize, volume)
                 y[n] = 1
             X[n,:,:,:,0] = volume
             n += 1
@@ -64,7 +78,7 @@ def batch_generator_ab(vsize, X_nodules_a, X_nodules_b, batch_size=64, do_downsc
         yield X, y
 
 
-gen = batch_generator_ab(vsize, X_localizer_nodules[:-50], X_cancer_nodules[:-50])
+gen = batch_generator_ab(np.asarray((32,32,32)), X_localizer_nodules[:-50], X_cancer_nodules[:-50])
 
 test_nodules = np.stack(X_localizer_nodules[-50:] + X_cancer_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
 test_nodules = datagen.preprocess(test_nodules)
@@ -88,9 +102,10 @@ elif config.optimizer == 'nadam':
 elif config.optimizer == 'sgd':
     optimizer = SGD(lr=config.lr, momentum=0.9, nesterov=True)
 
-model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=optimizer)
-model.load_weights('/mnt/data/snap/localizer_good.h5')
+model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=optimizer)
+model.load_weights(SNAP_PATH + localizer_weights_file)
 
+fom_best = 1e+6
 for e in range(config.num_epochs):
     h = model.fit_generator(
         gen,
@@ -109,3 +124,17 @@ for e in range(config.num_epochs):
 
     with open(SNAP_PATH + run_id + '.log.json', 'w') as fh:
         json.dump(history, fh)
+
+    # trade off 1e-6 fpr versus 0.1 tpr
+    fom = h.history['val_loss'][0]
+    print("fom", fom)
+    if fom < fom_best:
+        fom_best = fom
+        print("*** saving best result")
+        model.save_weights(SNAP_PATH + weights_file)
+
+    if e == config.lr_step_num_epochs:
+        print("*** reloading from best result")
+
+        model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=get_optimizer(config.lr * config.lr_step_multiplier))
+        model.load_weights(SNAP_PATH + weights_file)
