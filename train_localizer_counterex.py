@@ -4,7 +4,7 @@ from keras.optimizers import SGD, Adam, Nadam, RMSprop
 
 import data
 import datagen
-import net_dual
+import net
 
 import predict_localizer
 gpu_id = 0 # HACK for running predict_localizer without multi-gpu
@@ -21,13 +21,17 @@ import subprocess
 config_name = sys.argv[1]
 config = importlib.import_module(config_name)
 
+# FIXME
+#config.feature_sz=32
+#config.feature_alpha=1.5
+
 run_id = config_name + '__' + datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
 print(run_id)
 
 SNAP_PATH = '/mnt/data/snap/'
 
-vsize_x2 = np.asarray([32,32,32])
-vsize = np.asarray([16,16,16])
+vsize = np.asarray([32,32,32])
+# vsize = np.asarray([16,16,16])
 
 df_nodes = data.ndsb17_get_df_nodes() 
 df_nodes = df_nodes[(df_nodes["diameter_mm"]>10)]
@@ -37,13 +41,13 @@ patient_ids = data.ndsb17_get_patient_ids_noncancer()
 X_nodules, diams = data.ndsb17_get_all_nodules(np.asarray([64,64,64]), df_nodes)
 print("nodules", len(X_nodules))
 
-gen = datagen.batch_generator(vsize_x2, patient_ids, X_nodules[:-50], diams[:-50], batch_size=64)
+gen = datagen.batch_generator(vsize, patient_ids, X_nodules[:-50], diams[:-50], batch_size=64)
 
 # FIXME pass nodules split as input
 # FIXME crop because expanded margin for rotation
-# test_nodules = np.stack(X_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
-# test_nodules = datagen.preprocess(test_nodules)
-# test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
+test_nodules = np.stack(X_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
+test_nodules = datagen.preprocess(test_nodules)
+test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
 
 # test_volumes = []
 
@@ -79,13 +83,9 @@ gen = datagen.batch_generator(vsize_x2, patient_ids, X_nodules[:-50], diams[:-50
 # history['version'] = subprocess.check_output('git describe --always --dirty', shell=True).decode('ascii').strip()
 # history['argv'] = sys.argv
 
-layers = net_dual.model3d_layers(sz=32, alpha=1.5)
-
-model = net_dual.model3d_build((16, 16, 16), layers)
+model = net.model3d((16, 16, 16), sz=config.feature_sz, alpha=config.feature_alpha)
 print(model.summary())
-
-volume_model = net_dual.model3d_build((64, 64, 64), layers)
-print(volume_model.summary())
+volume_model = net.model3d((64, 64, 64), sz=config.feature_sz, alpha=config.feature_alpha, do_features=True)
 
 predict_localizer.volume_model = volume_model
 
@@ -101,12 +101,19 @@ predict_localizer.volume_model = volume_model
 model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=Adam(lr=0.001))
 #volume_model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=Adam(lr=0.001))
 
-for e in range(10000):
+#model.load_weights('/mnt/data/snap/config_baseline2__20170406104228.0033.h5')
+
+for e in range(500):
+    print("mini epoch", e)
+
     h = model.fit_generator(
         gen,
         1000,
         nb_epoch=1,
         verbose=1)
+
+    p_list = model.predict(test_nodules)[:,0]
+    print([ '%.4f' %(x) for x in sorted(p_list)[:10] ])
 
     model.save_weights(SNAP_PATH + run_id + '.tmp.h5')
     volume_model.load_weights(SNAP_PATH + run_id + '.tmp.h5')
@@ -116,22 +123,31 @@ for e in range(10000):
     predicted_image, labels = predict_localizer.predict_localizer(pid)
     label_boxes, label_sizes, label_activities_sum, label_activities_max = labels
 
+    print("max", np.amax(predicted_image))
+    print("mean", np.mean(predicted_image))
+
     image = data.ndsb17_get_image(pid).astype(np.float32)
-    image_2mm = skimage.transform.downscale_local_mean(image, (2,2,2), clip=False)
     
     X = []
-    for pos in np.argwhere(predicted_image > 2):
+    positions = np.argwhere(predicted_image > 2)
+    print("positions", positions.shape)
+    if positions.shape[0] == 0:
+        continue
+    pos_idxs = np.random.choice(positions.shape[0], size=min(positions.shape[0], 1000))
+    for pi in pos_idxs:
+        pos = 2 * positions[pi].copy()
         pos -= 8
-        volume = image_2mm[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
-        if volume.shape != list(vsize):
+        volume = image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
+        if volume.shape != tuple(vsize):
+            #print("shape mismatch", volume.shape, list(vsize))
             continue
         X.append( volume )
 
     if len(X) == 0:
+        print("empty counterexamples")
         continue
-    if len(X) > 1000:
-        X = np.random.choice(X, size=1000, replace=False)
     X = np.stack(X)[...,None]
+    X = skimage.transform.downscale_local_mean(X, (1,2,2,2,1), clip=False)
     X = datagen.preprocess(X)
     y = np.zeros((X.shape[0]))
 
@@ -142,6 +158,7 @@ for e in range(10000):
         batch_size=64,
         nb_epoch=1,
         verbose=1)
+
 
 
     # fpr, p_threshold, fpr_list, p_list = eval_model(model, volume_model)
