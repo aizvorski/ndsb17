@@ -248,8 +248,8 @@ def ndsb17_get_patient_ids_noncancer():
     return all_noncancer_pids
 
 
-def ndsb17_get_df_nodes():
-    df = pd.read_csv(NDSB17_PATH + 'processed/annotations/' + 'stage1_annotations_v2.csv')
+def ndsb17_get_df_nodes(cancer_label=1):
+    df = pd.read_csv(NDSB17_PATH + 'processed/annotations/' + 'stage1_annotations_v3.csv')
 
     patient_ids = ndsb17_get_patient_ids()
     short_pid_to_pid = { x[:6]: x for x in patient_ids }
@@ -264,10 +264,10 @@ def ndsb17_get_df_nodes():
         df.ix[n, "diameter_mm"] = 10*df.ix[n, "Size, cm"]
 
     # filter by cancer only
-    # TODO make this a parameter
-    df_labels = ndsb17_get_df_labels()
-    all_cancer_pids = list(df_labels[df_labels["cancer"] == 1]["id"])
-    df = df[ df["pid"].isin(all_cancer_pids) ]
+    if cancer_label is not None:
+        df_labels = ndsb17_get_df_labels()
+        selected_pids = list(df_labels[df_labels["cancer"] == cancer_label]["id"])
+        df = df[ df["pid"].isin(selected_pids) ]
 
     return df
 
