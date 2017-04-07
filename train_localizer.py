@@ -33,12 +33,17 @@ df_nodes = data.ndsb17_get_df_nodes()
 df_nodes = df_nodes[(df_nodes["diameter_mm"]>=9)]
 
 patient_ids = data.ndsb17_get_patient_ids_noncancer()
+for k in range(fold):
+    np.random.shuffle(patient_ids)
 
 X_nodules, diams = data.ndsb17_get_all_nodules(np.asarray([64,64,64]), df_nodes)
 #X_nodules = [x for x in X_nodules if x.shape == (64,64,64)] # FIXME this was a critical bug, nodules is filtered but diams is not
 print("nodules", len(X_nodules))
 
-gen = datagen.batch_generator(vsize, patient_ids, X_nodules[:-50], diams[:-50])
+X_nodules_train, X_nodules_test = data.kfold_split(X_cancer_nodules, fold)
+diams_train, diams_test = data.kfold_split(diams, fold)
+
+gen = datagen.batch_generator(vsize, patient_ids, X_nodules_train, diams_train)
 
 
 def random_volume(image, vsize):
@@ -48,7 +53,7 @@ def random_volume(image, vsize):
 
 # FIXME pass nodules split as input
 # FIXME crop because expanded margin for rotation
-test_nodules = np.stack(X_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
+test_nodules = np.stack(X_nodules_test)[:,16:16+32,16:16+32,16:16+32,None]
 test_nodules = datagen.preprocess(test_nodules)
 test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
 
