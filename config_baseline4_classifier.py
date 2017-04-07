@@ -7,4 +7,4 @@ lr  = 0.001
 lr_step_num_epochs = 200
 lr_step_multiplier = 0.1
 min_activity_train = 30
-min_activity_predict = 30
+min_activity_predict = 60
