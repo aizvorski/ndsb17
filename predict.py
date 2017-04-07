@@ -5,14 +5,28 @@ import scipy.ndimage.interpolation
 import numpy as np
 import pandas as pd
 import pickle
+import sys
+
 
 SNAP_PATH = '/mnt/data/snap/'
+
+config_name = sys.argv[1]
+config = importlib.import_module(config_name)
+
+fold = int(sys.argv[2])
+
+classifier_weights_file = sys.argv[3]
+
+localizer_output_dir = sys.argv[4]
+
+output_file = sys.argv[5]
+
 
 def ndsb17_get_predicted_nodules_v2(vsize, patient_ids, min_activity=30):
     X_nodules = []
     for pid in patient_ids:
         try:
-            with open('/mnt/data/ndsb17/predict/boxes/' + pid + '.pkl', 'rb') as fh:
+            with open(SNAP_PATH + localizer_output_dir + 'boxes/' + pid + '.pkl', 'rb') as fh:
                 label_boxes, label_sizes, label_activities_sum, label_activities_max = pickle.load( fh )
         except FileNotFoundError as e:
             print(pid, str(e))
@@ -66,14 +80,15 @@ patient_ids = df["id"].tolist()
 
 X_nodules = ndsb17_get_predicted_nodules_v2(vsize64, patient_ids, min_activity=10)
 
-p_base = len(df[df["cancer"]==1]) / len(df)
+# p_base = len(df[df["cancer"]==1]) / len(df)
 
-y_true, y_pred = [], []
-for n in range(len(df)):
-    pid = df["id"][n]
-    #print(pid, df["cancer"][n])
-    y_true.append(df["cancer"][n])
+# y_true, y_pred = [], []
+# for n in range(len(df)):
+#     pid = df["id"][n]
+#     #print(pid, df["cancer"][n])
+#     y_true.append(df["cancer"][n])
 
+y_true = df["cancer"].tolist()
 y_true = np.asarray(y_true)
 
 
@@ -85,23 +100,23 @@ config = importlib.import_module(config_name)
 model = net.model3d((16, 16, 16), sz=config.feature_sz, alpha=config.feature_alpha)
 model.load_weights('/mnt/data/snap/config_baseline2__20170401054549.0023.h5')
 
-y_pred = model.predict(X_nodules, batch_size=64)
+y_test = model.predict(X_nodules, batch_size=64)
 
 from sklearn.linear_model import LogisticRegression
 
 clf = LogisticRegression(C=1., solver='lbfgs')
 
 y_true = np.asarray(y_true)
-clf.fit(y_pred[:,None], y_true)
+clf.fit(y_test[:,None], y_true)
 
-patient_ids_test = []
+patient_ids_predict = patient_ids # TODO read from separate file
 
-X_nodules_test = ndsb17_get_predicted_nodules_v2(vsize64, patient_ids_test, min_activity=10)
+X_nodules_predict = ndsb17_get_predicted_nodules_v2(vsize64, patient_ids_predict, min_activity=10)
 
-y_test = model.predict(X_nodules_test, batch_size=64)
+y_test = model.predict(X_nodules_predict, batch_size=64)
 
 y_cal = clf.predict_proba(y_test[:,None])
 
 for n in range(len(patient_ids_test)):
-	print(patient_ids_test[n], y_cal[n])
+    print(patient_ids_test[n], y_cal[n])
 
