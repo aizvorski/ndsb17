@@ -18,14 +18,11 @@ import datagen
 config_label_threshold = 2
 
 def predict_localizer(pid):
-    global gpu_id
     global volume_model
     import net
 
-    print(gpu_id, pid)
-
-    # if os.path.exists('/mnt/data/ndsb17/predict/boxes/' + pid + '.pkl'):
-    #     return
+    # global gpu_id
+    # print(gpu_id, pid)
 
     image = data.ndsb17_get_image(pid)
     segmented_image = data.ndsb17_get_segmented_image(pid)
@@ -35,7 +32,7 @@ def predict_localizer(pid):
     segmented_image_2mm = skimage.transform.downscale_local_mean(segmented_image.astype(np.float32), (2,2,2), clip=False)
     segmented_image_2mm = (segmented_image_2mm > 0)
 
-    predicted_image = net.tiled_predict(volume_model, image_2mm)[:,:,:,0]
+    predicted_image = net.tiled_predict(volume_model, image_2mm)
     np.save('/mnt/data/ndsb17/predict/' + pid + '.npy', predicted_image)
 
     predicted_masked = predicted_image * segmented_image_2mm
@@ -58,7 +55,11 @@ def predict_localizer(pid):
 
 
 def predict_localizer_for_map(pid):
+    # if os.path.exists('/mnt/data/ndsb17/predict/boxes/' + pid + '.pkl'):
+    #     return
+
     predict_localizer(pid)
+    # no return value
 
 
 def gpu_init(queue):
@@ -76,7 +77,7 @@ def gpu_init(queue):
 
     global volume_model
     import net
-    volume_model = net.model3d((64, 64, 64), sz=32, alpha=1.5, do_features=True)
+    volume_model = net.model3d((64, 64, 64), sz=config.feature_sz, alpha=config.feature_alpha, do_features=True)
     volume_model.load_weights(weights_file)
 
 

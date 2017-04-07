@@ -85,8 +85,8 @@ def tiled_predict(model, image):
                 input_ = image[i*s:i*s+d,j*s:j*s+d,k*s:k*s+d]
                 if input_.shape != (d,d,d):
                     input_ = np.pad(input_, ((0, d-input_.shape[0]), (0, d-input_.shape[1]), (0, d-input_.shape[2])), 'constant')
-                result = model.predict(input_.reshape((1,d,d,d,1)), batch_size=1)[:,:,:,0]
-                full_result[i*s+m:(i+1)*s+m, j*s+m:(j+1)*s+m, k*s+m:(k+1)*s+m] = result
+                result = model.predict(input_.reshape((1,d,d,d,1)), batch_size=1)
+                full_result[i*s+m:(i+1)*s+m, j*s+m:(j+1)*s+m, k*s+m:(k+1)*s+m] = result[0,:,:,:,0]
     return full_result[0:image.shape[0], 0:image.shape[1], 0:image.shape[2]]
 
 
