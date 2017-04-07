@@ -15,18 +15,22 @@ import importlib
 import datetime
 import subprocess
 
+SNAP_PATH = '/mnt/data/snap/'
+
 config_name = sys.argv[1]
 config = importlib.import_module(config_name)
+
+fold = int(sys.argv[2])
+
+weights_file = sys.argv[3]
 
 run_id = 'localizer' + '__' + config_name + '__' + datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
 print(run_id)
 
-SNAP_PATH = '/mnt/data/snap/'
-
 vsize = np.asarray([32,32,32])
 
 df_nodes = data.ndsb17_get_df_nodes() 
-df_nodes = df_nodes[(df_nodes["diameter_mm"]>10)]
+df_nodes = df_nodes[(df_nodes["diameter_mm"]>=9)]
 
 patient_ids = data.ndsb17_get_patient_ids_noncancer()
 
@@ -42,8 +46,6 @@ def random_volume(image, vsize):
     volume = image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
     return volume
 
-patient_ids_noncancer = data.ndsb17_get_patient_ids_noncancer()
-
 # FIXME pass nodules split as input
 # FIXME crop because expanded margin for rotation
 test_nodules = np.stack(X_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
@@ -51,14 +53,14 @@ test_nodules = datagen.preprocess(test_nodules)
 test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
 
 
-num_test_volumes = 10
+num_test_volumes = 50
 def get_test_volumes():
     test_volumes = []
 
     vsize = np.asarray([128,128,128])
 
     while len(test_volumes) < num_test_volumes:
-        pid = np.random.choice(patient_ids_noncancer)
+        pid = np.random.choice(patient_ids)
         image = data.ndsb17_get_image(pid)
         segmented_image = data.ndsb17_get_segmented_image(pid)
         pos = np.asarray([ np.random.randint(k, image.shape[k] - vsize[k]) for k in range(3) ])
@@ -143,16 +145,16 @@ for e in range(1, config.num_epochs):
     with open(SNAP_PATH + run_id + '.log.json', 'w') as fh:
         json.dump(history, fh)
 
-    # roughly, trade off 1e-6 fpr versus 0.1 tpr
+    # trade off 1e-6 fpr versus 0.1 tpr
     fom = np.mean(p_list) - 0.1 * fpr90 / 1e-6
     print("fom", fom)
     if fom > fom_best:
         fom_best = fom
         print("*** saving best result")
-        model.save_weights(SNAP_PATH + 'localizer.h5')
+        model.save_weights(SNAP_PATH + weights_file)
 
     if e == config.lr_step_num_epochs:
         print("*** reloading from best result")
 
         model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=get_optimizer(config.lr * config.lr_step_multiplier))
-        model.load_weights(SNAP_PATH + 'localizer.h5')
+        model.load_weights(SNAP_PATH + weights_file)
