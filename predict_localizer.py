@@ -11,9 +11,7 @@ import multiprocessing
 import data
 import datagen
 
-
-#volume_model = net.model3d((64, 64, 64), sz=config.feature_sz, alpha=config.feature_alpha, do_features=True)
-
+SNAP_PATH = '/mnt/data/snap/'
 
 config_label_threshold = 2
 
@@ -22,7 +20,7 @@ def predict_localizer(pid):
     import net
 
     # global gpu_id
-    # print(gpu_id, pid)
+    print(pid)
 
     image = data.ndsb17_get_image(pid)
     segmented_image = data.ndsb17_get_segmented_image(pid)
@@ -33,7 +31,7 @@ def predict_localizer(pid):
     segmented_image_2mm = (segmented_image_2mm > 0)
 
     predicted_image = net.tiled_predict(volume_model, image_2mm)
-    np.save('/mnt/data/ndsb17/predict/' + pid + '.npy', predicted_image)
+    np.save(SNAP_PATH + localizer_output_dir + 'predicted_image/' + pid + '.npy', predicted_image)
 
     predicted_masked = predicted_image * segmented_image_2mm
 
@@ -48,7 +46,7 @@ def predict_localizer(pid):
     for idx in np.argsort(label_activities_sum)[::-1][:5]:
         print(idx, label_boxes[idx], label_sizes[idx], label_activities_sum[idx])
 
-    with open('/mnt/data/ndsb17/predict/boxes/' + pid + '.pkl', 'wb') as fh:
+    with open(SNAP_PATH + localizer_output_dir + 'boxes/' + pid + '.pkl', 'wb') as fh:
         pickle.dump( (label_boxes, label_sizes, label_activities_sum, label_activities_max), fh )
 
     return predicted_image, (label_boxes, label_sizes, label_activities_sum, label_activities_max)
@@ -94,6 +92,7 @@ if __name__ == "__main__":
 
     weights_file = sys.argv[2]
 
+    localizer_output_dir = sys.argv[3]
 
     manager = multiprocessing.Manager()
     gpu_init_queue = manager.Queue()
