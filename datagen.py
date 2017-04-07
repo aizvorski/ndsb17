@@ -1,6 +1,5 @@
 import data
 import numpy as np
-import random
 import scipy.ndimage.interpolation
 import skimage.transform
 
@@ -20,7 +19,7 @@ def volume_rotation(volume, angle):
     return result
 
 
-def volume_crop(volume, vsize):
+def volume_crop(volume, vsize, shift_max=4):
     p0 = (volume.shape[0] - vsize[0])//2
     p1 = (volume.shape[1] - vsize[1])//2
     p2 = (volume.shape[2] - vsize[2])//2
@@ -33,26 +32,28 @@ def volume_scale(volume, zoom_min=0.9, zoom_max=1.3):
 
 
 def volume_flip(volume):
-    if random.choice([True, False]):
+    if np.random.choice([True, False]):
         volume = volume[::-1,:,:]
-    if random.choice([True, False]):
+    if np.random.choice([True, False]):
         volume = volume[:,::-1,:]
-    if random.choice([True, False]):
+    if np.random.choice([True, False]):
         volume = volume[:,:,::-1]
     return volume
 
 
-def make_augmented(vsize, volume, X_nodules, diams, do_flip=True, do_rotate=True):
-    idx = random.choice(range(len(X_nodules)))
-    nodule = X_nodules[idx]
-    # randomly flip or not flip each axis
+def make_augmented(vsize, volume, do_flip=True, do_rotate=True, do_scale=True, background_volume=None, diam=64):
     if do_flip:
-        nodule = volume_flip(nodule)
+        volume = volume_flip(volume)
     if do_rotate:
-        nodule = volume_rotation(nodule, np.random.randint(0,360))
-    nodule = volume_crop(nodule, vsize)
-    mask = data.compose_make_mask(vsize, diam=diams[idx]+6, sigma=(diams[idx]+6)/8)
-    volume_aug = data.compose_max2(volume, nodule, mask)
+        volume = volume_rotation(volume, np.random.randint(0,360))
+    if do_scale:
+        volume = volume_scale(volume)
+    volume = volume_crop(volume, vsize)
+    if background_volume is not None:
+        mask = data.compose_make_mask(vsize, diam=diam+6, sigma=(diam+6)/8)
+        volume_aug = data.compose_max2(background_volume, volume, mask)
+    else:
+        volume_aug = volume
     return volume_aug
 
 
@@ -65,7 +66,7 @@ def sample_generator(vsize, patient_ids, X_nodules, diams):
     while True:
         if n % 1000 == 0:
             try:
-                pid = random.choice(patient_ids)
+                pid = np.random.choice(patient_ids)
                 image_ = data.ndsb17_get_image(pid)
                 segmented_image_ = data.ndsb17_get_segmented_image(pid)
 
@@ -94,7 +95,10 @@ def sample_generator(vsize, patient_ids, X_nodules, diams):
     
         is_augmented = False
         if central_density < -500 and is_lung and np.random.choice([True, False]):
-            volume = make_augmented(vsize, volume, X_nodules, diams)
+            idx = np.random.choice(range(len(X_nodules)))
+            nodule = X_nodules[idx]
+            diam = diams[idx]
+            volume = make_augmented(vsize, nodule, background_volume=volume, diam=diam)
             is_augmented = True
             n_aug += 1
             
