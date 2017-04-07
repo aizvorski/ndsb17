@@ -40,7 +40,7 @@ X_nodules, diams = data.ndsb17_get_all_nodules(np.asarray([64,64,64]), df_nodes)
 #X_nodules = [x for x in X_nodules if x.shape == (64,64,64)] # FIXME this was a critical bug, nodules is filtered but diams is not
 print("nodules", len(X_nodules))
 
-X_nodules_train, X_nodules_test = data.kfold_split(X_cancer_nodules, fold)
+X_nodules_train, X_nodules_test = data.kfold_split(X_nodules, fold)
 diams_train, diams_test = data.kfold_split(diams, fold)
 
 gen = datagen.batch_generator(vsize, patient_ids, X_nodules_train, diams_train)
@@ -127,7 +127,7 @@ def get_optimizer(lr):
     return optimizer
 
 model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=get_optimizer(config.lr))
-model.load_weights(SNAP_PATH + 'localizer.h5')
+# model.load_weights(SNAP_PATH + 'localizer.h5')
 
 fom_best = -1e+6
 for e in range(1, config.num_epochs):
