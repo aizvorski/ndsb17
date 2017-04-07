@@ -43,7 +43,7 @@ patient_ids = data.ndsb17_get_patient_ids_noncancer()
 X_cancer_nodules, cancer_diams = data.ndsb17_get_all_nodules(np.asarray([64,64,64]), df_nodes)
 print("cancer nodules", len(X_cancer_nodules))
 
-X_localizer_nodules = data.ndsb17_get_predicted_nodules(np.asarray([64,64,64]), patient_ids, SNAP_PATH+localizer_output_dir)
+X_localizer_nodules = data.ndsb17_get_predicted_nodules(np.asarray([64,64,64]), patient_ids, SNAP_PATH+localizer_output_dir, min_activity=config.min_activity_train)
 print("localizer nodules", len(X_localizer_nodules))
 
 df_benign = data.ndsb17_get_df_nodes(cancer_label=0)
