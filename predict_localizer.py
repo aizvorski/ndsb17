@@ -31,7 +31,7 @@ def predict_localizer(pid):
     segmented_image_2mm = (segmented_image_2mm > 0)
 
     predicted_image = net.tiled_predict(volume_model, image_2mm)
-    np.save(SNAP_PATH + localizer_output_dir + 'predicted_image/' + pid + '.npy', predicted_image)
+    np.save(SNAP_PATH + localizer_output_dir + 'predicted_images/' + pid + '.npy', predicted_image)
 
     predicted_masked = predicted_image * segmented_image_2mm
 
