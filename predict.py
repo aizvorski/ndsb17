@@ -22,7 +22,9 @@ classifier_weights_file = sys.argv[3]
 
 localizer_output_dir = sys.argv[4]
 
-output_file = sys.argv[5]
+patient_ids_predict_file = sys.argv[5]
+
+output_file = sys.argv[6]
 
 
 def ndsb17_get_predicted_nodules_v2(vsize, patient_ids, min_activity=30):
@@ -80,7 +82,7 @@ vsize64 = np.asarray((64,64,64))
 
 patient_ids = df["id"].tolist()
 
-X_nodules = ndsb17_get_predicted_nodules_v2(vsize64, patient_ids, min_activity=10)
+X_nodules = ndsb17_get_predicted_nodules_v2(vsize64, patient_ids, min_activity=config.min_activity_predict)
 
 # p_base = len(df[df["cancer"]==1]) / len(df)
 
@@ -113,10 +115,10 @@ y_test_calibrated = clf.predict_proba(y_test[:,None])
 
 print("log loss", sklearn.metrics.log_loss(y_true, y_test_calibrated))
 
+df_patient_ids_predict = pd.read_csv(patient_ids_predict_file)
+patient_ids_predict = df_patient_ids_predict["id"].tolist()
 
-patient_ids_predict = patient_ids # TODO read from separate file
-
-X_nodules_predict = ndsb17_get_predicted_nodules_v2(vsize64, patient_ids_predict, min_activity=10)
+X_nodules_predict = ndsb17_get_predicted_nodules_v2(vsize64, patient_ids_predict, min_activity=config.min_activity_predict)
 
 y_predict = model.predict(X_nodules_predict, batch_size=64)[:,0]
 
@@ -125,5 +127,5 @@ y_predict_calibrated = clf.predict_proba(y_predict[:,None])
 # for n in range(len(patient_ids_predict)):
 #     print(patient_ids_predict[n], y_predict_calibrated[n,1])
 
-df_output = pd.DataFrame({'id': patient_ids_predict, 'cancer': y_predict_calibrated[:,1]})
+df_output = pd.DataFrame({'id': patient_ids_predict, 'cancer': y_predict_calibrated[:,1]}, columns=['id', 'cancer'])
 df_output.to_csv(output_file)
