@@ -348,44 +348,45 @@ def ndsb17_get_all_nodules(vsize, df_nodes):
 """
 Note: depends on output from predict_localizer.py
 """
-def ndsb17_get_predicted_nodules(vsize, patient_ids):
+def ndsb17_get_predicted_nodules(vsize, patient_ids, localizer_output_dir):
     X_predicted_nodules = []
-    predicted_diams = []
+    # predicted_diams = []
     for pid in patient_ids:
         try:
-            with open('/mnt/data/ndsb17/predict/boxes/' + pid + '.pkl', 'rb') as fh:
+            with open(localizer_output_dir + 'boxes/' + pid + '.pkl', 'rb') as fh:
                 label_boxes, label_sizes, label_activities_sum, label_activities_max = pickle.load( fh )
         except FileNotFoundError as e:
             print(str(e))
             continue
 
-        idx = np.argsort(label_activities_sum)[::-1][:1]
-        box = label_boxes[idx]
-        if box is None:
-            continue
-        if label_activities_sum[idx] < 30: # FIXME configurable or soft threshold
-            continue
-        
-        center = 2*np.asarray([(box[0].start+box[0].stop)//2, (box[1].start+box[1].stop)//2, (box[2].start+box[2].stop)//2 ])
-        diam = 2*np.mean([(box[0].start-box[0].stop), (box[1].start-box[1].stop), (box[2].start-box[2].stop) ])
+        # idx = np.argsort(label_activities_sum)[::-1][:1]
+        for idx in range(len(label_boxes)):
+            box = label_boxes[idx]
+            if box is None:
+                continue
+            if label_activities_sum[idx] < 30: # FIXME configurable or soft threshold
+                continue
+            
+            center = 2*np.asarray([(box[0].start+box[0].stop)//2, (box[1].start+box[1].stop)//2, (box[2].start+box[2].stop)//2 ])
+            diam = 2*np.mean([(box[0].start-box[0].stop), (box[1].start-box[1].stop), (box[2].start-box[2].stop) ])
 
-        image = ndsb17_get_image(pid)
-        segmented_image = ndsb17_get_segmented_image(pid)
-        # image = datagen.preprocess(image)
-        # image_2mm = scipy.ndimage.interpolation.zoom(image, (0.5, 0.5, 0.5), order=1)
-        # segmented_image_2mm = scipy.ndimage.interpolation.zoom(segmented_image.astype(np.float32), (0.5, 0.5, 0.5), order=1)
-        # segmented_image_2mm = (segmented_image_2mm > 0)
+            image = ndsb17_get_image(pid)
+            segmented_image = ndsb17_get_segmented_image(pid)
+            # image = datagen.preprocess(image)
+            # image_2mm = scipy.ndimage.interpolation.zoom(image, (0.5, 0.5, 0.5), order=1)
+            # segmented_image_2mm = scipy.ndimage.interpolation.zoom(segmented_image.astype(np.float32), (0.5, 0.5, 0.5), order=1)
+            # segmented_image_2mm = (segmented_image_2mm > 0)
 
-        pos = center - vsize//2
-        volume = image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2] ]
-        segmented_volume = segmented_image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2] ]
-        if volume.shape != (64,64,64):
-            continue # TODO report something
-        volume = (volume + 1000)*segmented_volume - 1000
-        X_predicted_nodules.append(volume)
-        predicted_diams.append( diam )
+            pos = center - vsize//2
+            volume = image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2] ]
+            segmented_volume = segmented_image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2] ]
+            if volume.shape != (64,64,64):
+                continue # TODO report something
+            volume = (volume + 1000)*segmented_volume - 1000
+            X_predicted_nodules.append(volume)
+            # predicted_diams.append( diam )
 
-    return X_predicted_nodules, predicted_diams
+    return X_predicted_nodules
 
 
 from scipy import signal

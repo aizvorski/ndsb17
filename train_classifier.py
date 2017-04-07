@@ -16,13 +16,20 @@ import importlib
 import datetime
 import subprocess
 
+SNAP_PATH = '/mnt/data/snap/'
+
 config_name = sys.argv[1]
 config = importlib.import_module(config_name)
 
-run_id = config_name + '__' + datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+fold = int(sys.argv[2])
+
+localizer_output_dir = sys.argv[3]
+
+weights_file = sys.argv[4]
+
+run_id = 'classifier' + '__' + config_name + '__' + datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
 print(run_id)
 
-SNAP_PATH = '/mnt/data/snap/'
 
 vsize = np.asarray([32,32,32])
 
@@ -34,14 +41,32 @@ patient_ids = data.ndsb17_get_patient_ids_noncancer()
 X_cancer_nodules, cancer_diams = data.ndsb17_get_all_nodules(np.asarray([64,64,64]), df_nodes)
 print("cancer nodules", len(X_cancer_nodules))
 
+X_localizer_nodules = data.ndsb17_get_predicted_nodules(np.asarray([64,64,64]), patient_ids, SNAP_PATH+localizer_output_dir)
+print("localizer nodules", len(X_localizer_nodules))
 
-X_benign_nodules, benign_diams = data.ndsb17_get_predicted_nodules(np.asarray([64,64,64]), patient_ids)
-benign_diams = [64 for x in benign_diams]
-print("benign nodules", len(X_benign_nodules))
+def batch_generator_ab(vsize, X_nodules_a, X_nodules_b, batch_size=64, do_downscale=True):
+    while True:
+        X = np.zeros((batch_size,) + vsize + (1,), dtype=np.float32)
+        y = np.zeros((batch_size), dtype=np.int)
+        n = 0
+        while n < batch_size:
+            if np.random.choice([True, False]):
+                volume = datagen.make_augmented(vsize, np.random.choice(X_nodules_a))
+                y[n] = 0
+            else:
+                volume = datagen.make_augmented(vsize, np.random.choice(X_nodules_b))
+                y[n] = 1
+            X[n,:,:,:,0] = volume
+            n += 1
+        X = datagen.preprocess(X)
+        if do_downscale:
+            X = skimage.transform.downscale_local_mean(X, (1,2,2,2,1), clip=False)
+        yield X, y
 
-gen = datagen.batch_generator_ab(vsize, patient_ids, X_benign_nodules[:-50], benign_diams[:-50], X_cancer_nodules[:-50], cancer_diams[:-50])
 
-test_nodules = np.stack(X_benign_nodules[-50:] + X_cancer_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
+gen = batch_generator_ab(vsize, X_localizer_nodules[:-50], X_cancer_nodules[:-50])
+
+test_nodules = np.stack(X_localizer_nodules[-50:] + X_cancer_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
 test_nodules = datagen.preprocess(test_nodules)
 test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
 test_y = np.zeros((test_nodules.shape[0],), dtype=np.int)
@@ -64,7 +89,7 @@ elif config.optimizer == 'sgd':
     optimizer = SGD(lr=config.lr, momentum=0.9, nesterov=True)
 
 model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=optimizer)
-# model.load_weights('/mnt/data/snap/config_baseline2__20170329095350.0050.h5')
+model.load_weights('/mnt/data/snap/localizer_good.h5')
 
 for e in range(config.num_epochs):
     h = model.fit_generator(
