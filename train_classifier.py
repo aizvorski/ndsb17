@@ -39,6 +39,8 @@ df_nodes = data.ndsb17_get_df_nodes()
 df_nodes = df_nodes[(df_nodes["diameter_mm"]>=9)]
 
 patient_ids = data.ndsb17_get_patient_ids_noncancer()
+for k in range(fold):
+    np.random.shuffle(patient_ids)
 
 X_cancer_nodules, cancer_diams = data.ndsb17_get_all_nodules(np.asarray([64,64,64]), df_nodes)
 print("cancer nodules", len(X_cancer_nodules))

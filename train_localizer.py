@@ -43,6 +43,8 @@ print("nodules", len(X_nodules))
 X_nodules_train, X_nodules_test = data.kfold_split(X_nodules, fold)
 diams_train, diams_test = data.kfold_split(diams, fold)
 
+print(len(X_nodules_train), len(X_nodules_test))
+
 gen = datagen.batch_generator(vsize, patient_ids, X_nodules_train, diams_train)
 
 
