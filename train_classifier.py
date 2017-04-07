@@ -87,18 +87,19 @@ def batch_generator_ab(vsize, X_nodules_a, X_nodules_b, batch_size=64, do_downsc
         yield X, y
 
 
-gen = batch_generator_ab(np.asarray((32,32,32)), X_localizer_nodules_train, X_cancer_nodules_train)
+gen = batch_generator_ab(np.asarray((32,32,32)), X_localizer_nodules_train, X_cancer_nodules_train, do_downscale=config.do_downscale)
 
 test_nodules = np.stack(X_localizer_nodules_test + X_cancer_nodules_test)[:,16:16+32,16:16+32,16:16+32,None]
 test_nodules = datagen.preprocess(test_nodules)
-test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
+if config.do_downscale:
+    test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
 test_y = np.concatenate( (np.zeros((len(X_localizer_nodules_test),)), np.ones((len(X_cancer_nodules_test),))) )
 
 history = {'loss':[], 'acc':[], 'val_loss':[], 'val_acc':[]}
 history['version'] = subprocess.check_output('git describe --always --dirty', shell=True).decode('ascii').strip()
 history['argv'] = sys.argv
 
-model = net.model3d((16, 16, 16), sz=config.feature_sz, alpha=config.feature_alpha)
+model = net.model3d(config.net_input_vsize, sz=config.feature_sz, alpha=config.feature_alpha)
 print(model.summary())
 
 if config.optimizer == 'rmsprop':

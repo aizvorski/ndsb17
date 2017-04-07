@@ -26,8 +26,8 @@ patient_ids_predict_file = sys.argv[5]
 
 output_file = sys.argv[6]
 
-model = net.model3d((16, 16, 16), sz=config.feature_sz, alpha=config.feature_alpha)
-model.load_weights(SNAP_PATH + classifier_weights_file)
+model = net.model3d(config.net_input_vsize, sz=config.feature_sz, alpha=config.feature_alpha)
+model.load_weights(SNAP_PATH + classifier_weights_file, by_name=True)
 
 df = data.ndsb17_get_df_test_labels()
 p_base = len(df[df["cancer"]==1]) / len(df)
@@ -38,7 +38,8 @@ def predict_classifier(patient_ids):
     X_nodules, predicted_patient_ids = data.ndsb17_get_predicted_nodules(vsize64, patient_ids, SNAP_PATH + localizer_output_dir, min_activity=config.min_activity_predict)
     X_nodules = np.stack(X_nodules)[:,16:16+32,16:16+32,16:16+32,None]
     X_nodules = datagen.preprocess(X_nodules)
-    X_nodules = skimage.transform.downscale_local_mean(X_nodules, (1,2,2,2,1), clip=False)
+    if config.do_downscale:
+        X_nodules = skimage.transform.downscale_local_mean(X_nodules, (1,2,2,2,1), clip=False)
 
     y_pred = model.predict(X_nodules, batch_size=64)[:,0]
 

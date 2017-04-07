@@ -8,3 +8,5 @@ lr_step_num_epochs = 200
 lr_step_multiplier = 0.1
 min_activity_train = 60
 min_activity_predict = 60
+do_downscale = True
+net_input_vsize = (16,16,16)
