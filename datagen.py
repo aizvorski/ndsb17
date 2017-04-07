@@ -27,6 +27,11 @@ def volume_crop(volume, vsize):
     return volume[p0:p0+vsize[0], p1:p1+vsize[1], p2:p2+vsize[2] ]
 
 
+def volume_scale(volume, zoom_min=0.9, zoom_max=1.3):
+    zoom = np.random.random(3) * (zoom_max-zoom_min) + zoom_min
+    return scipy.ndimage.interpolation.zoom(volume, zoom, order=1, mode='nearest')
+
+
 def volume_flip(volume):
     if random.choice([True, False]):
         volume = volume[::-1,:,:]
