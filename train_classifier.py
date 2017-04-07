@@ -54,6 +54,13 @@ X_cancer_nodules = [x for x in X_cancer_nodules if x.shape == (64,64,64)]
 X_localizer_nodules = [x for x in X_localizer_nodules if x.shape == (64,64,64)]
 X_benign_nodules = [x for x in X_benign_nodules if x.shape == (64,64,64)]
 
+X_cancer_nodules_train, X_cancer_nodules_test = data.kfold_split(X_cancer_nodules, fold)
+X_localizer_nodules_train, X_localizer_nodules_test = data.kfold_split_fixed(X_localizer_nodules, fold, size=len(X_cancer_nodules_test))
+
+print(len(X_cancer_nodules_train), len(X_cancer_nodules_test))
+print(len(X_localizer_nodules_train), len(X_localizer_nodules_test))
+
+
 def batch_generator_ab(vsize, X_nodules_a, X_nodules_b, batch_size=64, do_downscale=True):
     while True:
         X = np.zeros((batch_size,) + tuple(vsize) + (1,), dtype=np.float32)
@@ -78,13 +85,12 @@ def batch_generator_ab(vsize, X_nodules_a, X_nodules_b, batch_size=64, do_downsc
         yield X, y
 
 
-gen = batch_generator_ab(np.asarray((32,32,32)), X_localizer_nodules[:-50], X_cancer_nodules[:-50])
+gen = batch_generator_ab(np.asarray((32,32,32)), X_localizer_nodules_train, X_cancer_nodules_train)
 
-test_nodules = np.stack(X_localizer_nodules[-50:] + X_cancer_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
+test_nodules = np.stack(X_localizer_nodules_test + X_cancer_nodules_test)[:,16:16+32,16:16+32,16:16+32,None]
 test_nodules = datagen.preprocess(test_nodules)
 test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
-test_y = np.zeros((test_nodules.shape[0],), dtype=np.int)
-test_y[50:] = 1
+test_y = np.concat(np.zeros((len(X_localizer_nodules_test),)), np.ones((len(X_cancer_nodules_test),)))
 
 history = {'loss':[], 'acc':[], 'val_loss':[], 'val_acc':[]}
 history['version'] = subprocess.check_output('git describe --always --dirty', shell=True).decode('ascii').strip()

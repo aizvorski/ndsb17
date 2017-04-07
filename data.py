@@ -348,7 +348,7 @@ def ndsb17_get_all_nodules(vsize, df_nodes):
 """
 Note: depends on output from predict_localizer.py
 """
-def ndsb17_get_predicted_nodules(vsize, patient_ids, localizer_output_dir):
+def ndsb17_get_predicted_nodules(vsize, patient_ids, localizer_output_dir, min_activity=30):
     X_predicted_nodules = []
     # predicted_diams = []
     for pid in patient_ids:
@@ -364,7 +364,7 @@ def ndsb17_get_predicted_nodules(vsize, patient_ids, localizer_output_dir):
             box = label_boxes[idx]
             if box is None:
                 continue
-            if label_activities_sum[idx] < 30: # FIXME configurable or soft threshold
+            if label_activities_sum[idx] < min_activity: # FIXME configurable or soft threshold
                 continue
             
             center = 2*np.asarray([(box[0].start+box[0].stop)//2, (box[1].start+box[1].stop)//2, (box[2].start+box[2].stop)//2 ])
@@ -428,3 +428,19 @@ def compose_max2(volume, nodule, mask):
 def compose_mean(volume, nodule, mask):
     x = volume * (1-mask) + nodule * mask
     return x
+
+
+def kfold_split(array, fold, num_folds=5):
+    start, end = (fold * len(array))//num_folds, ((fold+1) * len(array))//num_folds
+    b = array[start:end]
+    a = array[0:start] + array[end:-1] 
+    return a, b
+
+
+def kfold_split_fixed(array, fold, size=50, num_folds=5):
+    start, end = (fold * len(array))//num_folds, ((fold+1) * len(array))//num_folds
+    if end - start > size:
+        end = start + size
+    b = array[start:end]
+    a = array[0:start] + array[end:-1] 
+    return a, b
