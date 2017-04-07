@@ -50,19 +50,34 @@ test_nodules = np.stack(X_nodules[-50:])[:,16:16+32,16:16+32,16:16+32,None]
 test_nodules = datagen.preprocess(test_nodules)
 test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1), clip=False)
 
-test_volumes = []
 
-num_test_volumes = 3
-for n in range(num_test_volumes):
-    pid = np.random.choice(patient_ids_noncancer)
-    image = data.ndsb17_get_image(pid)
-    # info = data.ndsb17_get_info(pid)
-    test_volume = random_volume(image, (128,128,128))
-    test_volumes.append(test_volume)
+num_test_volumes = 10
+def get_test_volumes():
+    test_volumes = []
 
-test_volumes = np.stack(test_volumes)[...,None]
-test_volumes = datagen.preprocess(test_volumes)
-test_volumes = skimage.transform.downscale_local_mean(test_volumes, (1,2,2,2,1), clip=False)
+    vsize = np.asarray([128,128,128])
+
+    while len(test_volumes) < num_test_volumes:
+        pid = np.random.choice(patient_ids_noncancer)
+        image = data.ndsb17_get_image(pid)
+        segmented_image = data.ndsb17_get_segmented_image(pid)
+        pos = np.asarray([ np.random.randint(k, image.shape[k] - vsize[k]) for k in range(3) ])
+        segmented_volume = segmented_image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
+        if np.count_nonzero(segmented_volume) == 0:
+            continue
+        volume = image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2]]
+
+        test_volumes.append(volume)
+
+    test_volumes = np.stack(test_volumes)[...,None]
+    test_volumes = datagen.preprocess(test_volumes)
+    test_volumes = skimage.transform.downscale_local_mean(test_volumes, (1,2,2,2,1), clip=False)
+
+    return test_volumes
+
+
+test_volumes = get_test_volumes()
+
 
 def eval_model(model, volume_model):
     p_list = model.predict(test_nodules)[:,0]
@@ -77,12 +92,13 @@ def eval_model(model, volume_model):
     for n in range(num_test_volumes):
         test_result = volume_model.predict(test_volumes[n:n+1], batch_size=1)[:,:,:,0]
         test_p = net.sigmoid_activations(test_result)
-        fpr = np.count_nonzero(test_p[0,:,:,:] > p_threshold) / test_volume.size
+        fpr = np.count_nonzero(test_p[0,:,:,:] > p_threshold) / test_volumes[n].size
         fpr_list.append(fpr)
-        fpr90 = np.count_nonzero(test_p[0,:,:,:] > 0.880797) / test_volume.size
+        fpr90 = np.count_nonzero(test_p[0,:,:,:] > 0.880797) / test_volumes[n].size
         fpr90_list.append(fpr90)
     
     return np.mean(fpr_list), np.mean(fpr90_list), p_threshold, fpr_list, fpr90_list, p_list
+
 
 history = {'loss':[], 'acc':[], 'fpr':[], 'p_threshold':[], 'p_list':[]}
 history['version'] = subprocess.check_output('git describe --always --dirty', shell=True).decode('ascii').strip()
@@ -104,6 +120,7 @@ def get_optimizer(lr):
     return optimizer
 
 model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=get_optimizer(config.lr))
+model.load_weights(SNAP_PATH + 'localizer.h5')
 
 fom_best = -1e+6
 for e in range(1, config.num_epochs):
@@ -126,8 +143,8 @@ for e in range(1, config.num_epochs):
     with open(SNAP_PATH + run_id + '.log.json', 'w') as fh:
         json.dump(history, fh)
 
-    # roughly, trade off 0.00005 fpr versus 0.1 tpr
-    fom = np.mean(p_list) - 0.1 * fpr90 / 0.00005
+    # roughly, trade off 1e-6 fpr versus 0.1 tpr
+    fom = np.mean(p_list) - 0.1 * fpr90 / 1e-6
     print("fom", fom)
     if fom > fom_best:
         fom_best = fom
