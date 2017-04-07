@@ -36,7 +36,7 @@ print(run_id)
 vsize = np.asarray([32,32,32])
 
 df_nodes = data.ndsb17_get_df_nodes() 
-df_nodes = df_nodes[(df_nodes["diameter_mm"]>10)]
+df_nodes = df_nodes[(df_nodes["diameter_mm"]>=9)]
 
 patient_ids = data.ndsb17_get_patient_ids_noncancer()
 
@@ -46,13 +46,13 @@ print("cancer nodules", len(X_cancer_nodules))
 X_localizer_nodules = data.ndsb17_get_predicted_nodules(np.asarray([64,64,64]), patient_ids, SNAP_PATH+localizer_output_dir)
 print("localizer nodules", len(X_localizer_nodules))
 
-# df_benign = data.ndsb17_get_df_nodes(cancer_label=0)
-# X_benign_nodules, benign_diams = data.ndsb17_get_all_nodules(np.asarray([64,64,64]), df_benign)
-# print("benign nodules", len(X_benign_nodules))
+df_benign = data.ndsb17_get_df_nodes(cancer_label=0)
+X_benign_nodules, benign_diams = data.ndsb17_get_all_nodules(np.asarray([64,64,64]), df_benign)
+print("benign nodules", len(X_benign_nodules))
 
-X_localizer_nodules = [x for x in X_localizer_nodules if x.shape == (64,64,64)]
 X_cancer_nodules = [x for x in X_cancer_nodules if x.shape == (64,64,64)]
-#X_benign_nodules = [x for x in X_benign_nodules if x.shape == (64,64,64)]
+X_localizer_nodules = [x for x in X_localizer_nodules if x.shape == (64,64,64)]
+X_benign_nodules = [x for x in X_benign_nodules if x.shape == (64,64,64)]
 
 def batch_generator_ab(vsize, X_nodules_a, X_nodules_b, batch_size=64, do_downscale=True):
     while True:
@@ -125,7 +125,6 @@ for e in range(config.num_epochs):
     with open(SNAP_PATH + run_id + '.log.json', 'w') as fh:
         json.dump(history, fh)
 
-    # trade off 1e-6 fpr versus 0.1 tpr
     fom = h.history['val_loss'][0]
     print("fom", fom)
     if fom < fom_best:
