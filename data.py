@@ -350,6 +350,7 @@ Note: depends on output from predict_localizer.py
 """
 def ndsb17_get_predicted_nodules(vsize, patient_ids, localizer_output_dir, min_activity=30):
     X_predicted_nodules = []
+    predicted_pids = []
     # predicted_diams = []
     for pid in patient_ids:
         try:
@@ -382,11 +383,12 @@ def ndsb17_get_predicted_nodules(vsize, patient_ids, localizer_output_dir, min_a
             segmented_volume = segmented_image[pos[0]:pos[0]+vsize[0], pos[1]:pos[1]+vsize[1], pos[2]:pos[2]+vsize[2] ]
             if volume.shape != (64,64,64):
                 continue # TODO report something
-            volume = (volume + 1000)*segmented_volume - 1000
-            X_predicted_nodules.append(volume)
+            #volume = (volume + 1000)*segmented_volume - 1000
+            X_predicted_nodules.append(volume.copy())
             # predicted_diams.append( diam )
+            predicted_pids.append(pid)
 
-    return X_predicted_nodules
+    return X_predicted_nodules, predicted_pids
 
 
 from scipy import signal
