@@ -19,10 +19,13 @@ def volume_rotation(volume, angle):
     return result
 
 
-def volume_crop(volume, vsize, shift_max=4):
+def volume_crop(volume, vsize, shift_max=3):
     p0 = (volume.shape[0] - vsize[0])//2
     p1 = (volume.shape[1] - vsize[1])//2
     p2 = (volume.shape[2] - vsize[2])//2
+    # p0 = np.random.randint(max(0, p0-shift_max), min(volume.shape[0] - vsize[0], p0+shift_max))
+    # p1 = np.random.randint(max(0, p1-shift_max), min(volume.shape[1] - vsize[1], p1+shift_max))
+    # p2 = np.random.randint(max(0, p2-shift_max), min(volume.shape[2] - vsize[2], p2+shift_max))
     return volume[p0:p0+vsize[0], p1:p1+vsize[1], p2:p2+vsize[2] ]
 
 
