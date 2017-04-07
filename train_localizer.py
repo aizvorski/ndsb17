@@ -18,7 +18,7 @@ import subprocess
 config_name = sys.argv[1]
 config = importlib.import_module(config_name)
 
-run_id = config_name + '__' + datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+run_id = 'localizer' + '__' + config_name + '__' + datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
 print(run_id)
 
 SNAP_PATH = '/mnt/data/snap/'
@@ -52,19 +52,20 @@ test_nodules = skimage.transform.downscale_local_mean(test_nodules, (1,2,2,2,1),
 
 test_volumes = []
 
-for n in range(10):
-    pid = random.choice(patient_ids_noncancer)
+num_test_volumes = 3
+for n in range(num_test_volumes):
+    pid = np.random.choice(patient_ids_noncancer)
     image = data.ndsb17_get_image(pid)
     # info = data.ndsb17_get_info(pid)
     test_volume = random_volume(image, (128,128,128))
-    test_volume = datagen.preprocess(test_volume)
-    test_volume = skimage.transform.downscale_local_mean(test_volume, (1,2,2,2,1), clip=False)
     test_volumes.append(test_volume)
 
 test_volumes = np.stack(test_volumes)[...,None]
+test_volumes = datagen.preprocess(test_volumes)
+test_volumes = skimage.transform.downscale_local_mean(test_volumes, (1,2,2,2,1), clip=False)
 
-def eval_model(model, volume_model, num_evals=10):
-    p_list = model.predict(test_nodules)[:,1]
+def eval_model(model, volume_model):
+    p_list = model.predict(test_nodules)[:,0]
     p_threshold = np.mean(sorted(p_list)[10:15]) # FIXME depends on size of X_nodules and tpr target
     print([ '%.4f' %(x) for x in sorted(p_list)[:10] ])
     #p_threshold = 0.99
@@ -72,13 +73,16 @@ def eval_model(model, volume_model, num_evals=10):
     volume_model.load_weights(SNAP_PATH + run_id + '.tmp.h5')
 
     fpr_list = []
-    for n in range(num_evals):
-        test_result = volume_model.predict(test_volumes[n:n+1], batch_size=1)
-        test_p = net.softmax_activations(test_result)
-        fpr = np.count_nonzero(test_p[0,:,:,:,1] > p_threshold) / test_volume.size
+    fpr90_list = []
+    for n in range(num_test_volumes):
+        test_result = volume_model.predict(test_volumes[n:n+1], batch_size=1)[:,:,:,0]
+        test_p = net.sigmoid_activations(test_result)
+        fpr = np.count_nonzero(test_p[0,:,:,:] > p_threshold) / test_volume.size
         fpr_list.append(fpr)
+        fpr90 = np.count_nonzero(test_p[0,:,:,:] > 0.880797) / test_volume.size
+        fpr90_list.append(fpr90)
     
-    return np.mean(fpr_list), p_threshold, fpr_list, p_list
+    return np.mean(fpr_list), np.mean(fpr90_list), p_threshold, fpr_list, fpr90_list, p_list
 
 history = {'loss':[], 'acc':[], 'fpr':[], 'p_threshold':[], 'p_list':[]}
 history['version'] = subprocess.check_output('git describe --always --dirty', shell=True).decode('ascii').strip()
@@ -88,27 +92,29 @@ model = net.model3d((16, 16, 16), sz=config.feature_sz, alpha=config.feature_alp
 print(model.summary())
 volume_model = net.model3d((64, 64, 64), sz=config.feature_sz, alpha=config.feature_alpha, do_features=True)
 
-if config.optimizer == 'rmsprop':
-    optimizer = RMSprop(lr=config.lr)
-elif config.optimizer == 'adam':
-    optimizer = Adam(lr=config.lr)
-elif config.optimizer == 'nadam':
-    optimizer = Nadam(lr=config.lr)
-elif config.optimizer == 'sgd':
-    optimizer = SGD(lr=config.lr, momentum=0.9, nesterov=True)
+def get_optimizer(lr):
+    if config.optimizer == 'rmsprop':
+        optimizer = RMSprop(lr=lr)
+    elif config.optimizer == 'adam':
+        optimizer = Adam(lr=lr)
+    elif config.optimizer == 'nadam':
+        optimizer = Nadam(lr=lr)
+    elif config.optimizer == 'sgd':
+        optimizer = SGD(lr=lr, momentum=0.9, nesterov=True)
+    return optimizer
 
-model.compile(loss='categorical_crossentropy', metrics=['accuracy'], optimizer=optimizer)
+model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=get_optimizer(config.lr))
 
-
-for e in range(config.num_epochs):
+fom_best = -1e+6
+for e in range(1, config.num_epochs):
     h = model.fit_generator(
         gen,
         config.samples_per_epoch,
         nb_epoch=1,
         verbose=1)
 
-    fpr, p_threshold, fpr_list, p_list = eval_model(model, volume_model)
-    print("fpr", fpr, "std", np.std(fpr_list), "p_threshold", p_threshold)
+    fpr, fpr90, p_threshold, fpr_list, fpr90_list, p_list = eval_model(model, volume_model)
+    print("fpr", fpr, "fpr90", fpr90, "std", np.std(fpr_list), "p_threshold", p_threshold)
     history['loss'].append(h.history['loss'][0])
     history['acc'].append(h.history['acc'][0])
     history['fpr'].append(fpr)
@@ -119,3 +125,17 @@ for e in range(config.num_epochs):
 
     with open(SNAP_PATH + run_id + '.log.json', 'w') as fh:
         json.dump(history, fh)
+
+    # roughly, trade off 0.00005 fpr versus 0.1 tpr
+    fom = np.mean(p_list) - 0.1 * fpr90 / 0.00005
+    print("fom", fom)
+    if fom > fom_best:
+        fom_best = fom
+        print("*** saving best result")
+        model.save_weights(SNAP_PATH + 'localizer.h5')
+
+    if e == config.lr_step_num_epochs:
+        print("*** reloading from best result")
+
+        model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=get_optimizer(config.lr * config.lr_step_multiplier))
+        model.load_weights(SNAP_PATH + 'localizer.h5')
