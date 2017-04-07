@@ -2,10 +2,13 @@ import data
 import datagen
 import net
 import scipy.ndimage.interpolation
+import skimage.transform
 import numpy as np
 import pandas as pd
 import pickle
 import sys
+import importlib
+import net
 
 
 SNAP_PATH = '/mnt/data/snap/'
@@ -66,8 +69,7 @@ def ndsb17_get_predicted_nodules_v2(vsize, patient_ids, min_activity=30):
 
     X_nodules = np.stack(X_nodules)[:,16:16+32,16:16+32,16:16+32,None]
     X_nodules = datagen.preprocess(X_nodules)
-    X_nodules = scipy.ndimage.interpolation.zoom(X_nodules, (1, 0.5, 0.5, 0.5, 1), order=1)
-
+    X_nodules = skimage.transform.downscale_local_mean(X_nodules, (1,2,2,2,1), clip=False)
     return X_nodules
 
 
@@ -92,31 +94,36 @@ y_true = df["cancer"].tolist()
 y_true = np.asarray(y_true)
 
 
-import importlib
-import net
-
-config_name = 'config_baseline2'
-config = importlib.import_module(config_name)
 model = net.model3d((16, 16, 16), sz=config.feature_sz, alpha=config.feature_alpha)
-model.load_weights('/mnt/data/snap/config_baseline2__20170401054549.0023.h5')
+model.load_weights(SNAP_PATH + classifier_weights_file)
 
-y_test = model.predict(X_nodules, batch_size=64)
+y_test = model.predict(X_nodules, batch_size=64)[:,0]
+print("y_test", y_test.shape)
+print("y_true", y_true.shape)
+
 
 from sklearn.linear_model import LogisticRegression
+import sklearn.metrics
 
 clf = LogisticRegression(C=1., solver='lbfgs')
 
-y_true = np.asarray(y_true)
 clf.fit(y_test[:,None], y_true)
+
+y_test_calibrated = clf.predict_proba(y_test[:,None])
+
+print("log loss", sklearn.metrics.log_loss(y_true, y_test_calibrated))
+
 
 patient_ids_predict = patient_ids # TODO read from separate file
 
 X_nodules_predict = ndsb17_get_predicted_nodules_v2(vsize64, patient_ids_predict, min_activity=10)
 
-y_test = model.predict(X_nodules_predict, batch_size=64)
+y_predict = model.predict(X_nodules_predict, batch_size=64)[:,0]
 
-y_cal = clf.predict_proba(y_test[:,None])
+y_predict_calibrated = clf.predict_proba(y_predict[:,None])
 
-for n in range(len(patient_ids_test)):
-    print(patient_ids_test[n], y_cal[n])
+# for n in range(len(patient_ids_predict)):
+#     print(patient_ids_predict[n], y_predict_calibrated[n,1])
 
+df_output = pd.DataFrame({'id': patient_ids_predict, 'cancer': y_predict_calibrated[:,1]})
+df_output.to_csv(output_file)
