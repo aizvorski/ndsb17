@@ -53,10 +53,14 @@ def predict_localizer(pid):
 
 
 def predict_localizer_for_map(pid):
-    # if os.path.exists('/mnt/data/ndsb17/predict/boxes/' + pid + '.pkl'):
-    #     return
+    if os.path.exists(SNAP_PATH + localizer_output_dir + 'boxes/' + pid + '.pkl'):
+        print(pid, "done")
+        return
 
-    predict_localizer(pid)
+    try:
+        predict_localizer(pid)
+    except FileNotFoundError as e:
+        print(str(e))
     # no return value
 
 
