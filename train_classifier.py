@@ -102,17 +102,19 @@ history['argv'] = sys.argv
 model = net.model3d(config.net_input_vsize, sz=config.feature_sz, alpha=config.feature_alpha)
 print(model.summary())
 
-if config.optimizer == 'rmsprop':
-    optimizer = RMSprop(lr=config.lr)
-elif config.optimizer == 'adam':
-    optimizer = Adam(lr=config.lr)
-elif config.optimizer == 'nadam':
-    optimizer = Nadam(lr=config.lr)
-elif config.optimizer == 'sgd':
-    optimizer = SGD(lr=config.lr, momentum=0.9, nesterov=True)
+def get_optimizer(lr):
+    if config.optimizer == 'rmsprop':
+        optimizer = RMSprop(lr=lr)
+    elif config.optimizer == 'adam':
+        optimizer = Adam(lr=lr)
+    elif config.optimizer == 'nadam':
+        optimizer = Nadam(lr=lr)
+    elif config.optimizer == 'sgd':
+        optimizer = SGD(lr=lr, momentum=0.9, nesterov=True)
+    return optimizer
 
-model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=optimizer)
-model.load_weights(SNAP_PATH + localizer_weights_file)
+model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=get_optimizer(config.lr))
+model.load_weights(SNAP_PATH + localizer_weights_file, by_name=True)
 
 fom_best = 1e+6
 for e in range(config.num_epochs):
